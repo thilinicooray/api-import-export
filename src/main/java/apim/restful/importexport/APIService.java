@@ -18,16 +18,10 @@
 
 package apim.restful.importexport;
 
-
 import com.google.gson.Gson;
 import com.sun.jersey.multipart.FormDataParam;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.POST;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -46,13 +40,13 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.model.APIIdentifier;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 /**
  * This class provides JAX-RS services for exporting and importing APIs.
  * These services provides functionality for exporting and importing single API at a time.
  */
-@Path("/")
-public class APIService {
+@Path("/") public class APIService {
 
 	private static final Log log = LogFactory.getLog(APIService.class);
 
@@ -62,54 +56,53 @@ public class APIService {
 	 * This service generates a zipped archive which contains all the above mentioned resources
 	 * for a given API
 	 *
-	 * @param id ID of the API that needs to be exported
+	 * @param name         Name of the API that needs to be exported
+	 * @param version      Version of the API that needs to be exported
+	 * @param providerName Provider name of the API that needs to be exported
 	 * @return Zipped API as the response to the service call
 	 */
-	@GET
-	@Path("/export-api/{id}")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.MULTIPART_FORM_DATA)
-	public Response exportAPI(@PathParam("id") String id, @Context HttpHeaders httpHeaders) {
+	@GET @Path("/export-api") @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.MULTIPART_FORM_DATA) public Response exportAPI(
+			@QueryParam("name") String name, @QueryParam("version") String version,
+			@QueryParam("provider") String providerName, @Context HttpHeaders httpHeaders) {
 
 		String userName;
-		log.info("Retrieving API for API-Id : " + id);
+		if (name == null || version == null || providerName == null) {
+			log.error("Invalid API Information ");
+
+			return Response.status(Response.Status.BAD_REQUEST).entity("Invalid API " +
+			                                                           "Information" +
+			                                                           " ")
+			               .type(MediaType.APPLICATION_JSON).
+							build();
+		}
+		log.info("Retrieving API for API-Id : " + name + "-" + version + "-" + providerName);
 		APIIdentifier apiIdentifier;
 		try {
-			if (!AuthenticatorUtil.isAuthorizedUser(httpHeaders)) {
-				//not an authorized user
-				return Response.status(Response.Status.UNAUTHORIZED)
-				               .entity("User Authorization " + "Failed")
-				               .type(MediaType.APPLICATION_JSON).
-						               build();
+
+			Response authorizationResponse = AuthenticatorUtil.authorizeUser(httpHeaders);
+			if (!(Response.Status.OK.getStatusCode() == authorizationResponse.getStatus())) {
+				return authorizationResponse;
 			}
 
 			userName = AuthenticatorUtil.getAuthenticatedUserName();
-
-			try {
-				apiIdentifier = new APIIdentifier(id);
-			} catch (APIManagementException e) {
-				log.error("Invalid API Identifier " + id, e);
-
-				return Response.status(Response.Status.BAD_REQUEST).entity("Invalid API " +
-				                                                           "Identifier" +
-				                                                           " " + id)
-				               .type(MediaType.APPLICATION_JSON).
-								build();
-			}
-
-			//Allows to export APIs created only by current tenant
-			if (!apiIdentifier.getProviderName().equals(APIUtil.replaceEmailDomainBack(userName))) {
+			//provider names with @ signs are only accepted
+			String apiDomain = MultitenantUtils.getTenantDomain(providerName);
+			String apiRequesterDomain = MultitenantUtils.getTenantDomain(userName);
+			//Allows to export APIs created only in current tenant domain
+			if (!apiDomain.equals(apiRequesterDomain)) {  //i can get anything from my domain
 				//not authorized to export requested API
 				log.error("Not authorized to " +
-				          "export API " + id);
+				          "export API :" + name + "-" + version + "-" + providerName);
 				return Response.status(Response.Status.FORBIDDEN).entity("Not authorized to " +
-				                                                         "export API " + id)
+				                                                         "export API :" + name +
+				                                                         "-" + version + "-" +
+				                                                         providerName)
 				               .type(MediaType.APPLICATION_JSON).
 								build();
 			}
 
-			String name = id.substring(id.indexOf("_") + 1, id.lastIndexOf("_"));
-			String version = id.substring(id.lastIndexOf("_") + 1, id.length());
+			apiIdentifier =
+					new APIIdentifier(APIUtil.replaceEmailDomainBack(providerName), name, version);
 
 			//construct location for the exporting API
 			String archivePath =
@@ -131,7 +124,7 @@ public class APIService {
 			File file = new File(archivePath + ".zip");
 			Response.ResponseBuilder response = Response.ok(file);
 			response.header("Content-Disposition",
-			                "attachment; filename=\""+file.getName()+"\"");
+			                "attachment; filename=\"" + file.getName() + "\"");
 			return response.build();
 
 		} catch (APIExportException e) {
@@ -143,43 +136,39 @@ public class APIService {
 
 	}
 
-    /**
-     * @param uploadedInputStream input stream from the REST request
-     * @return response indicating the status of the process
-     */
-    @POST
-    @Path("/import-api")
-    @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream) {
+	/**
+	 * @param uploadedInputStream input stream from the REST request
+	 * @return response indicating the status of the process
+	 */
+	@POST @Path("/import-api") @Consumes(MediaType.MULTIPART_FORM_DATA) @Produces(MediaType.APPLICATION_JSON) public Response importAPI(
+			@FormDataParam("file") InputStream uploadedInputStream) {
 
-        try {
-            APIImportUtil.initializeProvider();
-            String currentDirectory = System.getProperty("user.dir");
-            String createdFolders = APIImportExportConstants.CREATED_FOLDER;
-            File folderPath = new File(currentDirectory + createdFolders);
-            boolean folderCreateStatus = folderPath.mkdirs();
+		try {
+			APIImportUtil.initializeProvider();
+			String currentDirectory = System.getProperty("user.dir");
+			String createdFolders = APIImportExportConstants.CREATED_FOLDER;
+			File folderPath = new File(currentDirectory + createdFolders);
+			boolean folderCreateStatus = folderPath.mkdirs();
 
-            if (folderCreateStatus) {
-                String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
-                String absolutePath = currentDirectory + createdFolders;
-                APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
-                String extractedFolderName = APIImportUtil.unzipArchive(new File(absolutePath + uploadFileName),
-                        new File(absolutePath));
-                APIImportUtil.importAPI(absolutePath + extractedFolderName);
-                return Response.status(Status.CREATED).build();
-            } else {
-                return Response.status(Status.BAD_REQUEST).build();
-            }
-        } catch (APIManagementException e) {
-            String errorDetail = new Gson().toJson(e.getMessage());
-            return Response.serverError().entity(errorDetail).build();
-        } catch (APIImportException e) {
-            String errorDetail=new Gson().toJson(e.getErrorDescription());
-            return Response.serverError().entity(errorDetail).build();
-        }
-    }
-
-
+			if (folderCreateStatus) {
+				String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
+				String absolutePath = currentDirectory + createdFolders;
+				APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
+				String extractedFolderName = APIImportUtil
+						.unzipArchive(new File(absolutePath + uploadFileName),
+						              new File(absolutePath));
+				APIImportUtil.importAPI(absolutePath + extractedFolderName);
+				return Response.status(Status.CREATED).build();
+			} else {
+				return Response.status(Status.BAD_REQUEST).build();
+			}
+		} catch (APIManagementException e) {
+			String errorDetail = new Gson().toJson(e.getMessage());
+			return Response.serverError().entity(errorDetail).build();
+		} catch (APIImportException e) {
+			String errorDetail = new Gson().toJson(e.getErrorDescription());
+			return Response.serverError().entity(errorDetail).build();
+		}
+	}
 
 }

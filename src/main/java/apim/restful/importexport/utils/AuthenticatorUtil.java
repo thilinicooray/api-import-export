@@ -30,6 +30,8 @@ import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -55,11 +57,12 @@ public class AuthenticatorUtil {
 	 * importing APIs
 	 *
 	 * @param headers HTTP headers of the received request
-	 * @return boolean Whether received credentials are authorized for accessing API
+	 * @return Response indicating whether authentication and authorization for accessing API got
+	 * succeeded
 	 * @throws APIExportException If an error occurs while authorizing current user
 	 */
 
-	public static boolean isAuthorizedUser(HttpHeaders headers) throws APIExportException {
+	public static Response authorizeUser(HttpHeaders headers) throws APIExportException {
 
 		if (!isValidCredentials(headers)) {
 			throw new APIExportException("No username and password is provided for authentication");
@@ -91,9 +94,19 @@ public class AuthenticatorUtil {
 				// domain
 				if (Arrays.asList(userRoles).contains(adminRoleName)) {
 					log.info(username + " is authorized to import and export APIs");
-					return true;
+					return Response.ok().build();
+				} else {
+					return Response.status(Response.Status.FORBIDDEN)
+					               .entity("User Authorization " + "Failed")
+					               .type(MediaType.APPLICATION_JSON).
+							               build();
 				}
 
+			} else {
+				return Response.status(Response.Status.UNAUTHORIZED)
+				               .entity("User Authentication " + "Failed")
+				               .type(MediaType.APPLICATION_JSON).
+						               build();
 			}
 
 		} catch (UserStoreException e) {
@@ -103,7 +116,6 @@ public class AuthenticatorUtil {
 			PrivilegedCarbonContext.endTenantFlow();
 		}
 
-		return false;
 	}
 
 	/**
