@@ -6,9 +6,13 @@ Main functionality of API Export is to retrieve all the required meta informatio
 resources for the requested API and generate a zipped archive.
 
 Zipped archive consists of the following structure
-    <APIName>-<version>
-    |_ Meta Information
+
+    *<APIName>-<version>
+
+    *|_ Meta Information
+
        |_ api.json
+
     |_ Image
        |_ icon.<extension>
     |_ WSDL

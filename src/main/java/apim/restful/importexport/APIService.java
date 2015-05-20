@@ -47,7 +47,6 @@ import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 @Path("/")
 public class APIService {
 
-	//log name change
 	private static final Log log = LogFactory.getLog(APIService.class);
 
 	/**
@@ -63,7 +62,6 @@ public class APIService {
 	@Path("/export-api/{id}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.MULTIPART_FORM_DATA)
-	//make them query params : provider, api name and version
 	public Response exportAPI(@PathParam("id") String id, @Context HttpHeaders httpHeaders) {
 
 		String userName;
@@ -124,7 +122,7 @@ public class APIService {
 			log.info("API" + name + "-" + version + " exported successfully");
 
 			File file = new File(archivePath + ".zip");
-			Response.ResponseBuilder response = Response.ok((Object) file);
+			Response.ResponseBuilder response = Response.ok(file);
 			response.header("Content-Disposition",
 			                "attachment; filename=\""+file.getName()+"\"");
 			return response.build();
