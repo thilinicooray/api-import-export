@@ -19,11 +19,13 @@
 package apim.restful.importexport;
 
 
-import java.io.*;
+import com.google.gson.Gson;
+import com.sun.jersey.multipart.FormDataParam;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
@@ -31,13 +33,18 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import javax.ws.rs.core.Response.Status;
+import java.io.File;
+import java.io.InputStream;
+
 import apim.restful.importexport.utils.APIExportUtil;
+import apim.restful.importexport.utils.APIImportUtil;
 import apim.restful.importexport.utils.ArchiveGeneratorUtil;
 import apim.restful.importexport.utils.AuthenticatorUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
-import org.wso2.carbon.apimgt.api.model.*;
+import org.wso2.carbon.apimgt.api.model.APIIdentifier;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 
 /**
@@ -135,6 +142,43 @@ public class APIService {
 		}
 
 	}
+
+    /**
+     * @param uploadedInputStream input stream from the REST request
+     * @return response indicating the status of the process
+     */
+    @POST
+    @Path("/import-api")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream) {
+
+        try {
+            APIImportUtil.initializeProvider();
+            String currentDirectory = System.getProperty("user.dir");
+            String createdFolders = APIImportExportConstants.CREATED_FOLDER;
+            File folderPath = new File(currentDirectory + createdFolders);
+            boolean folderCreateStatus = folderPath.mkdirs();
+
+            if (folderCreateStatus) {
+                String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
+                String absolutePath = currentDirectory + createdFolders;
+                APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
+                String extractedFolderName = APIImportUtil.unzipArchive(new File(absolutePath + uploadFileName),
+                        new File(absolutePath));
+                APIImportUtil.importAPI(absolutePath + extractedFolderName);
+                return Response.status(Status.CREATED).build();
+            } else {
+                return Response.status(Status.BAD_REQUEST).build();
+            }
+        } catch (APIManagementException e) {
+            String errorDetail = new Gson().toJson(e.getMessage());
+            return Response.serverError().entity(errorDetail).build();
+        } catch (APIImportException e) {
+            String errorDetail=new Gson().toJson(e.getErrorDescription());
+            return Response.serverError().entity(errorDetail).build();
+        }
+    }
 
 
 
