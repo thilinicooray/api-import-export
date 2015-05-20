@@ -1,4 +1,4 @@
-# api-export-import
+# api-import-export
 
 This is used to import and export APIs from WSO2 API Manager.
 
@@ -25,4 +25,4 @@ API Import accepts the exported zipped archive and create an API in the imported
 
 This feature has been implemented as a RESTful API.
 
-# api-import-export
+
