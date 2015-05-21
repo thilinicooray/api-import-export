@@ -18,18 +18,11 @@
 
 package apim.restful.importexport;
 
-import org.wso2.carbon.utils.CarbonUtils;
-
-import java.io.File;
-
 /**
  * This class contains all the constants required for API Import and Export
  */
 public final class APIImportExportConstants {
 
-	//This is where archive file get generated for exporting API
-	public static final String BASE_ARCHIVE_PATH = CarbonUtils.getCarbonHome() + File.separator + "tmp" +
-	                                               File.separator + "work" ;
     //name of the new folder
     public static final String CREATED_FOLDER = "/ImportDirectory/";
     //name of the provider
@@ -62,5 +55,11 @@ public final class APIImportExportConstants {
     public static final String FAULT_SEQUENCE_NAME = "json_fault";
     //location of the fault sequence
     public static final String FAULT_SEQUENCE_LOCATION = "/Sequences/fault-sequence/json_fault.xml";
+	//sequence direction : in
+	public static final String SEQUENCE_DIRECTION_IN = "in";
+	//sequence direction : out
+	public static final String SEQUENCE_DIRECTION_OUT = "out";
+	//sequence direction : fault
+	public static final String SEQUENCE_DIRECTION_FAULT = "fault";
 
 }

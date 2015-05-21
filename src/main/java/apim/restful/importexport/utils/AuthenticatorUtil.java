@@ -19,8 +19,8 @@
 package apim.restful.importexport.utils;
 
 import apim.restful.importexport.APIExportException;
-import org.apache.commons.codec.binary.StringUtils;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
@@ -45,9 +45,9 @@ public class AuthenticatorUtil {
 
 	private static final String AUTHORIZATION_PROPERTY = "Authorization";
 	private static final String AUTHENTICATION_SCHEME = "Basic";
+	private static final Log log = LogFactory.getLog(AuthenticatorUtil.class);
 	private static String username;
 	private static String password;
-	private static final Log log = LogFactory.getLog(AuthenticatorUtil.class);
 
 	private AuthenticatorUtil() {
 	}
@@ -65,7 +65,12 @@ public class AuthenticatorUtil {
 	public static Response authorizeUser(HttpHeaders headers) throws APIExportException {
 
 		if (!isValidCredentials(headers)) {
-			throw new APIExportException("No username and password is provided for authentication");
+			log.error("No username and password is provided for authentication");
+			return Response.status(Response.Status.UNAUTHORIZED)
+			               .entity("No username and password is provided for authentication")
+			               .type(MediaType.APPLICATION_JSON).
+					               build();
+
 		}
 
 		try {

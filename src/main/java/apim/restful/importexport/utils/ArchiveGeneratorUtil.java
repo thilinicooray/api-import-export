@@ -19,10 +19,14 @@
 package apim.restful.importexport.utils;
 
 import apim.restful.importexport.APIExportException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -91,7 +95,6 @@ public class ArchiveGeneratorUtil {
 		try {
 			fileOutputStream = new FileOutputStream(directoryToZip.getPath() + ".zip");
 			zipOutputStream = new ZipOutputStream(fileOutputStream);
-
 			for (File file : fileList) {
 				if (!file.isDirectory()) {
 					addToArchive(directoryToZip, file, zipOutputStream);
@@ -102,10 +105,8 @@ public class ArchiveGeneratorUtil {
 			log.error("I/O error while adding files to archive" + e.getMessage());
 			throw new APIExportException("I/O error while adding files to archive", e);
 		} finally {
-			APIExportUtil.flushStream(zipOutputStream);
-			APIExportUtil.closeStream(zipOutputStream);
-			APIExportUtil.flushStream(fileOutputStream);
-			APIExportUtil.closeStream(fileOutputStream);
+			IOUtils.closeQuietly(zipOutputStream);
+			IOUtils.closeQuietly(fileOutputStream);
 		}
 	}
 
@@ -131,20 +132,14 @@ public class ArchiveGeneratorUtil {
 			ZipEntry zipEntry = new ZipEntry(zipFilePath);
 			zipOutputStream.putNextEntry(zipEntry);
 
-			int content;
-			while ((content = fileInputStream.read()) != -1) {
-				// convert to char and display it
-				zipOutputStream.write((char)content);
-				zipOutputStream.flush();
-
-			}
+			IOUtils.copy(fileInputStream, zipOutputStream);
 
 			zipOutputStream.closeEntry();
 		} catch (IOException e) {
 			log.error("I/O error while writing files to archive" + e.getMessage());
 			throw new APIExportException("I/O error while writing files to archive", e);
 		} finally {
-			APIExportUtil.closeStream(fileInputStream);
+			IOUtils.closeQuietly(fileInputStream);
 		}
 	}
 }

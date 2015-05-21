@@ -18,29 +18,30 @@
 
 package apim.restful.importexport;
 
-import com.google.gson.Gson;
-import com.sun.jersey.multipart.FormDataParam;
-
-import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
-import javax.ws.rs.core.Response.Status;
-import java.io.File;
-import java.io.InputStream;
-
 import apim.restful.importexport.utils.APIExportUtil;
 import apim.restful.importexport.utils.APIImportUtil;
 import apim.restful.importexport.utils.ArchiveGeneratorUtil;
 import apim.restful.importexport.utils.AuthenticatorUtil;
+import com.google.gson.Gson;
+import com.sun.jersey.multipart.FormDataParam;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.model.APIIdentifier;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+
+import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 
 /**
  * This class provides JAX-RS services for exporting and importing APIs.
@@ -61,7 +62,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 	 * @param providerName Provider name of the API that needs to be exported
 	 * @return Zipped API as the response to the service call
 	 */
-	@GET @Path("/export-api") @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.MULTIPART_FORM_DATA) public Response exportAPI(
+	@GET @Path("/export-api") @Produces(MediaType.MULTIPART_FORM_DATA) public Response exportAPI(
 			@QueryParam("name") String name, @QueryParam("version") String version,
 			@QueryParam("provider") String providerName, @Context HttpHeaders httpHeaders) {
 
@@ -89,7 +90,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 			String apiDomain = MultitenantUtils.getTenantDomain(providerName);
 			String apiRequesterDomain = MultitenantUtils.getTenantDomain(userName);
 			//Allows to export APIs created only in current tenant domain
-			if (!apiDomain.equals(apiRequesterDomain)) {  //i can get anything from my domain
+			if (!apiDomain.equals(apiRequesterDomain)) {
 				//not authorized to export requested API
 				log.error("Not authorized to " +
 				          "export API :" + name + "-" + version + "-" + providerName);
@@ -104,9 +105,14 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 			apiIdentifier =
 					new APIIdentifier(APIUtil.replaceEmailDomainBack(providerName), name, version);
 
+			//create temp location for storing API data to generate archive
+			java.nio.file.Path tempDirPath = Files.createTempDirectory("archiveLocation");
+			String archiveBasePath = tempDirPath.toString();
+
+			APIExportUtil.setArchiveBasePath(archiveBasePath);
+
 			//construct location for the exporting API
-			String archivePath =
-					APIImportExportConstants.BASE_ARCHIVE_PATH.concat("/" + name + "-" + version);
+			String archivePath = archiveBasePath.concat("/" + name + "-" + version);
 
 			Response ApiResourceRetrievalResponse =
 					APIExportUtil.retrieveApiToExport(apiIdentifier, userName);
@@ -122,13 +128,37 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 			log.info("API" + name + "-" + version + " exported successfully");
 
 			File file = new File(archivePath + ".zip");
-			Response.ResponseBuilder response = Response.ok(file);
+			Response.ResponseBuilder response =
+					Response.ok(new FileInputStream(archivePath + ".zip"));
 			response.header("Content-Disposition",
 			                "attachment; filename=\"" + file.getName() + "\"");
+			response.header("Content-Length", file.length());
+			//response.header("Content-Type", "application/octet-stream");
+			response.header("Content-Transfer-Encoding", "deflate");
 			return response.build();
+			/*final InputStream responseStream = new FileInputStream(archivePath + ".zip");
+			StreamingOutput output = new StreamingOutput() {
+				public void write(OutputStream out) throws IOException, WebApplicationException {
+					int length;
+					byte[] buffer = new byte[1024];
+					while((length = responseStream.read(buffer)) != -1) {
+						out.write(buffer, 0, length);
+						out.flush();
+					}
+
+					responseStream.close();
+				}
+			};
+			return Response.ok(output).header(
+					"Content-Disposition", "attachment, filename=\"...\"").build();*/
 
 		} catch (APIExportException e) {
 			log.error("APIExportException occurred while exporting ", e);
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
+							build();
+		} catch (IOException e) {
+			log.error("IOException occurred while exporting ", e);
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
 							build();
