@@ -38,7 +38,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -62,7 +61,7 @@ import java.nio.file.Files;
 	 * @param providerName Provider name of the API that needs to be exported
 	 * @return Zipped API as the response to the service call
 	 */
-	@GET @Path("/export-api") @Produces(MediaType.MULTIPART_FORM_DATA) public Response exportAPI(
+	@GET @Path("/export-api") @Produces("application/zip") public Response exportAPI(
 			@QueryParam("name") String name, @QueryParam("version") String version,
 			@QueryParam("provider") String providerName, @Context HttpHeaders httpHeaders) {
 
@@ -123,34 +122,15 @@ import java.nio.file.Files;
 				return ApiResourceRetrievalResponse;
 			}
 
-			ArchiveGeneratorUtil.archiveDirectory(archivePath);
+			ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
 
 			log.info("API" + name + "-" + version + " exported successfully");
 
-			File file = new File(archivePath + ".zip");
-			Response.ResponseBuilder response =
-					Response.ok(new FileInputStream(archivePath + ".zip"));
-			response.header("Content-Disposition",
-			                "attachment; filename=\"" + file.getName() + "\"");
-			response.header("Content-Length", file.length());
-			//response.header("Content-Type", "application/octet-stream");
-			response.header("Content-Transfer-Encoding", "deflate");
+			File file = new File(archiveBasePath + ".zip");
+			Response.ResponseBuilder response = Response.ok(file);
+			response.header("Content-Disposition", "attachment; filename=\"" + file.getName() +
+			                                       "\"");
 			return response.build();
-			/*final InputStream responseStream = new FileInputStream(archivePath + ".zip");
-			StreamingOutput output = new StreamingOutput() {
-				public void write(OutputStream out) throws IOException, WebApplicationException {
-					int length;
-					byte[] buffer = new byte[1024];
-					while((length = responseStream.read(buffer)) != -1) {
-						out.write(buffer, 0, length);
-						out.flush();
-					}
-
-					responseStream.close();
-				}
-			};
-			return Response.ok(output).header(
-					"Content-Disposition", "attachment, filename=\"...\"").build();*/
 
 		} catch (APIExportException e) {
 			log.error("APIExportException occurred while exporting ", e);
