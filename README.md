@@ -29,6 +29,7 @@ API Import accepts the exported zipped archive and create an API in the imported
 This feature has been implemented as a RESTful API.
 
 Sample cURL command for API export
+
 curl -H "Authorization:Basic YWRtaW46YWRtaW4=" -X GET "https://10.100.7.39:9443/api-import-export/export-api?name=test&version=1.0.0&provider=admin"  -k > import.zip
 
 
