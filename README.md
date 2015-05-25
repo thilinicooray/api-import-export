@@ -30,6 +30,7 @@ This feature has been implemented as a RESTful API.
 
 ##Sample cURL command for API export
 
-curl -H "Authorization:Basic YWRtaW46YWRtaW4=" -X GET "https://10.100.7.39:9443/api-import-export/export-api?name=test&version=1.0.0&provider=admin"  -k > import.zip
+curl -H "Authorization:Basic YWRtaW46YWRtaW4=" -X GET "https://10.100.7
+.39:9443/api-import-export/export-api?name=test&version=1.0.0&provider=admin"  -k > exportedApi.zip
 
 
