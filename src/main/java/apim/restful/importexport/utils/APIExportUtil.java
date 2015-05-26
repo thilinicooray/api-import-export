@@ -193,7 +193,7 @@ public class APIExportUtil {
 
 		//retrieving sequences
 
-		APIExportUtil.exportSequences(apiToReturn, apiID, tenantId);
+		exportSequences(apiToReturn, apiID, tenantId);
 
 		//set API status to created
 		apiToReturn.setStatus(APIStatus.CREATED);
@@ -499,7 +499,8 @@ public class APIExportUtil {
 		String archivePath = archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
 		                                            apiIdentifier.getVersion()) + "/Sequences/";
 
-		String pathToExportedSequence = archivePath + direction + "-sequence";
+		String pathToExportedSequence = archivePath + direction + "-sequence/";
+
 		String exportedSequenceFile = pathToExportedSequence + sequenceName + ".xml";
 		try {
 			createDirectory(pathToExportedSequence);

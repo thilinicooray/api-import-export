@@ -122,11 +122,11 @@ import java.nio.file.Files;
 				return ApiResourceRetrievalResponse;
 			}
 
-			ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
+			ArchiveGeneratorUtil.archiveDirectory(archivePath);
 
 			log.info("API" + name + "-" + version + " exported successfully");
 
-			File file = new File(archiveBasePath + ".zip");
+			File file = new File(archivePath + ".zip");
 			Response.ResponseBuilder response = Response.ok(file);
 			response.header("Content-Disposition", "attachment; filename=\"" + file.getName() +
 			                                       "\"");
@@ -165,8 +165,7 @@ import java.nio.file.Files;
 				String absolutePath = currentDirectory + createdFolders;
 				APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
 				String extractedFolderName = APIImportUtil
-						.unzipArchive(new File(absolutePath + uploadFileName),
-						              new File(absolutePath));
+						.extractArchive(new File(absolutePath + uploadFileName), absolutePath);
 				APIImportUtil.importAPI(absolutePath + extractedFolderName);
 				return Response.status(Status.CREATED).build();
 			} else {

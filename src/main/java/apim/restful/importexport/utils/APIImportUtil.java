@@ -18,37 +18,23 @@
 
 package apim.restful.importexport.utils;
 
-import apim.restful.importexport.APIImportExportConstants;
 import apim.restful.importexport.APIImportException;
+import apim.restful.importexport.APIImportExportConstants;
 import apim.restful.importexport.APIService;
-
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
-
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.FaultGatewaysException;
-import org.wso2.carbon.apimgt.api.model.API;
-import org.wso2.carbon.apimgt.api.model.APIIdentifier;
-import org.wso2.carbon.apimgt.api.model.Documentation;
-import org.wso2.carbon.apimgt.api.model.Icon;
-import org.wso2.carbon.apimgt.api.model.Tier;
+import org.wso2.carbon.apimgt.api.model.*;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.InputStream;
-import java.io.IOException;
-
+import java.io.*;
 import java.util.Enumeration;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -160,6 +146,57 @@ public final class APIImportUtil {
         }
         return extractedFolder;
     }
+
+	/**
+	 * This method decompresses API the archive
+	 *
+	 * @param sourceFile  The archive containing the API
+	 * @param destination location of the archive to be extracted
+	 * @return Name of the extracted directory
+	 * @throws APIImportException If the decompressing fails
+	 */
+	public static String extractArchive(File sourceFile, String destination)
+			throws APIImportException {
+		BufferedInputStream inputStream = null;
+		FileOutputStream outputStream = null;
+		String archiveName = null;
+		try {
+			ZipFile zip = new ZipFile(sourceFile);
+			archiveName = sourceFile.getName().substring(0, sourceFile.getName().length() - 4);
+			String destinationDirectory = destination.concat(archiveName + "/");
+			new File(destinationDirectory).mkdir();
+			Enumeration zipFileEntries = zip.entries();
+
+			// Process each entry
+			while (zipFileEntries.hasMoreElements()) {
+				// grab a zip file entry
+				ZipEntry entry = (ZipEntry) zipFileEntries.nextElement();
+				String currentEntry = entry.getName();
+				File destinationFile = new File(destinationDirectory, currentEntry);
+				File destinationParent = destinationFile.getParentFile();
+
+				// create the parent directory structure if needed
+				destinationParent.mkdirs();
+
+				if (!entry.isDirectory()) {
+					inputStream = new BufferedInputStream(zip.getInputStream(entry));
+					// write the current file to disk
+					outputStream = new FileOutputStream(destinationFile);
+					IOUtils.copy(inputStream, outputStream);
+				}
+			}
+
+			return archiveName;
+
+		} catch (IOException e) {
+			log.error("Failed to extract archive file ", e);
+			throw new APIImportException("Failed to extract archive file. " + e.getMessage());
+		} finally {
+			closeQuietly(inputStream);
+			closeQuietly(outputStream);
+		}
+
+	}
 
     /**
      * This method copies data from input stream and writes to output stream
