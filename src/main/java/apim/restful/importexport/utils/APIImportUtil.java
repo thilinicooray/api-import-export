@@ -162,17 +162,22 @@ public final class APIImportUtil {
 		String archiveName = null;
 		try {
 			ZipFile zip = new ZipFile(sourceFile);
-			archiveName = sourceFile.getName().substring(0, sourceFile.getName().length() - 4);
-			String destinationDirectory = destination.concat(archiveName + "/");
-			new File(destinationDirectory).mkdir();
 			Enumeration zipFileEntries = zip.entries();
+			int index = 0;
 
 			// Process each entry
 			while (zipFileEntries.hasMoreElements()) {
 				// grab a zip file entry
+
 				ZipEntry entry = (ZipEntry) zipFileEntries.nextElement();
 				String currentEntry = entry.getName();
-				File destinationFile = new File(destinationDirectory, currentEntry);
+
+				if (index == 0) {
+					archiveName = currentEntry.substring(0, currentEntry.indexOf('/'));
+					--index;
+				}
+
+				File destinationFile = new File(destination, currentEntry);
 				File destinationParent = destinationFile.getParentFile();
 
 				// create the parent directory structure if needed

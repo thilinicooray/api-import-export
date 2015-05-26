@@ -122,11 +122,11 @@ import java.nio.file.Files;
 				return ApiResourceRetrievalResponse;
 			}
 
-			ArchiveGeneratorUtil.archiveDirectory(archivePath);
+			ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
 
 			log.info("API" + name + "-" + version + " exported successfully");
 
-			File file = new File(archivePath + ".zip");
+			File file = new File(archiveBasePath + ".zip");
 			Response.ResponseBuilder response = Response.ok(file);
 			response.header("Content-Disposition", "attachment; filename=\"" + file.getName() +
 			                                       "\"");
