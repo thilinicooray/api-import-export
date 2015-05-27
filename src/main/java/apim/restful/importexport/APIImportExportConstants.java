@@ -60,9 +60,9 @@ public final class APIImportExportConstants {
     public static final String XML_EXTENSION = ".xml";
     //sequence direction : in
     public static final String SEQUENCE_DIRECTION_IN = "in";
-	//sequence direction : out
-	public static final String SEQUENCE_DIRECTION_OUT = "out";
-	//sequence direction : fault
-	public static final String SEQUENCE_DIRECTION_FAULT = "fault";
+    //sequence direction : out
+    public static final String SEQUENCE_DIRECTION_OUT = "out";
+    //sequence direction : fault
+    public static final String SEQUENCE_DIRECTION_FAULT = "fault";
 
 }
