@@ -18,11 +18,14 @@
 
 package apim.restful.importexport.utils;
 
-import apim.restful.importexport.APIImportException;
+import apim.restful.importexport.APIExportException;
 import apim.restful.importexport.APIImportExportConstants;
+import apim.restful.importexport.APIImportException;
 import apim.restful.importexport.APIService;
+
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -30,11 +33,29 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.FaultGatewaysException;
-import org.wso2.carbon.apimgt.api.model.*;
+import org.wso2.carbon.apimgt.api.model.API;
+import org.wso2.carbon.apimgt.api.model.APIIdentifier;
+import org.wso2.carbon.apimgt.api.model.Documentation;
+import org.wso2.carbon.apimgt.api.model.Icon;
+import org.wso2.carbon.apimgt.api.model.Tier;
+import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 
-import java.io.*;
+import org.wso2.carbon.registry.api.Registry;
+import org.wso2.carbon.registry.api.RegistryException;
+import org.wso2.carbon.registry.core.Resource;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.IOException;
+
 import java.util.Enumeration;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -42,7 +63,6 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import static org.apache.commons.io.IOUtils.closeQuietly;
-
 
 /**
  * This class provides the functions utilized to import an API from an API archive.
@@ -60,7 +80,6 @@ public final class APIImportUtil {
     public static void initializeProvider() throws APIManagementException {
         provider = APIManagerFactory.getInstance().getAPIProvider(APIImportExportConstants.PROVIDER_NAME);
     }
-
 
     /**
      * This method uploads a given file to specified location
@@ -167,8 +186,8 @@ public final class APIImportUtil {
 
 			// Process each entry
 			while (zipFileEntries.hasMoreElements()) {
-				// grab a zip file entry
 
+				// grab a zip file entry
 				ZipEntry entry = (ZipEntry) zipFileEntries.nextElement();
 				String currentEntry = entry.getName();
 
@@ -244,7 +263,7 @@ public final class APIImportUtil {
             Set<Tier> allowedTiers = provider.getTiers();
             boolean isAllTiersAvailable = allowedTiers.containsAll(importedApi.getAvailableTiers());
 
-            if(!isAllTiersAvailable){
+            if (!isAllTiersAvailable) {
 
                 //If at least one unsupported tier is found, it should be removed before adding API
                 Set<Tier> unsupportedTiersList = Sets.difference(importedApi.getAvailableTiers(), allowedTiers);
@@ -284,7 +303,6 @@ public final class APIImportUtil {
         File imageFolder = new File(pathToArchive + APIImportExportConstants.IMAGE_FILE_LOCATION);
 
         try {
-
             if (imageFolder.isDirectory() && imageFolder.listFiles() != null && imageFolder.listFiles().length > 0) {
                 for (File imageFile : imageFolder.listFiles()) {
                     if (imageFile.getName().contains(APIImportExportConstants.IMAGE_FILE_NAME)) {
@@ -331,10 +349,10 @@ public final class APIImportUtil {
                 //For each type of document, separate actions are preformed
                 for (Documentation doc : documentations) {
 
-                    if(APIImportExportConstants.INLINE_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())){
+                    if (APIImportExportConstants.INLINE_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         provider.addDocumentation(apiIdentifier, doc);
                         provider.addDocumentationContent(importedApi, doc.getName(), doc.getSummary());
-                    } else if (APIImportExportConstants.URL_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())){
+                    } else if (APIImportExportConstants.URL_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         provider.addDocumentation(apiIdentifier, doc);
                     } else if (APIImportExportConstants.FILE_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         inputStream = new FileInputStream(pathToArchive + doc.getFilePath());
@@ -360,37 +378,90 @@ public final class APIImportUtil {
     }
 
     /**
-     * This method adds API sequences to the imported API
+     * This method adds API sequences to the imported API. If the sequence is a newly defined one, it is added.
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
-     * @throws org.wso2.carbon.apimgt.api.APIManagementException if adding sequences to the API fails or if the gateway
-     *          fails during the update
+     * @throws APIImportException if getting the registry instance fails
+     *
      */
-    private static void addAPISequences(String pathToArchive, API importedApi) throws APIManagementException {
-        String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION;
+    private static void addAPISequences(String pathToArchive, API importedApi) throws APIImportException {
 
         try {
+            Registry registry = APIExportUtil.getRegistry(APIImportExportConstants.PROVIDER_NAME);
+            String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
+            String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
+                    + inSequenceFileName;
+
             //Adding in-sequence, if any
             if (checkFileExistence(inSequenceFileLocation)) {
-                importedApi.setInSequence(APIImportExportConstants.IN_SEQUENCE_NAME);
+                addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
+                        inSequenceFileName, inSequenceFileLocation);
             }
+
+            String outSequenceFileName = importedApi.getOutSequence() + APIImportExportConstants.XML_EXTENSION;
+            String outSequenceFileLocation = pathToArchive + APIImportExportConstants.OUT_SEQUENCE_LOCATION
+                    + outSequenceFileName;
 
             //Adding out-sequence, if any
-            String outSequenceFileLocation = pathToArchive + APIImportExportConstants.OUT_SEQUENCE_LOCATION;
             if (checkFileExistence(outSequenceFileLocation)) {
-                importedApi.setOutSequence(APIImportExportConstants.OUT_SEQUENCE_NAME);
+                addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
+                        outSequenceFileName, outSequenceFileLocation);
             }
 
+            String faultSequenceFileName = importedApi.getFaultSequence() + APIImportExportConstants.XML_EXTENSION;
+            String faultSequenceFileLocation = pathToArchive + APIImportExportConstants.FAULT_SEQUENCE_LOCATION
+                    + faultSequenceFileName;
+
             //Adding fault-sequence, if any
-            String faultSequenceFileLocation = pathToArchive + APIImportExportConstants.FAULT_SEQUENCE_LOCATION;
             if (checkFileExistence(faultSequenceFileLocation)) {
-                importedApi.setFaultSequence(APIImportExportConstants.FAULT_SEQUENCE_NAME);
+                addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
+                        faultSequenceFileName, faultSequenceFileLocation);
             }
-            provider.updateAPI(importedApi);
-        } catch (FaultGatewaysException e) {
-            log.error("Gateway fail while adding sequences. ", e);
-            throw new APIManagementException("Gateway fail while adding sequences. " + e.getMessage());
+        } catch (APIExportException e) {
+            log.error("Failed to get the registry instance. ", e);
+            throw new APIImportException("Failed to get the registry instance. " + e.getMessage());
+        }
+    }
+
+    /**
+     * This method adds the sequence files to the registry.
+     *
+     * @param registry the registry instance
+     * @param customSequenceType type of the sequence
+     * @param sequenceFileName name of the sequence
+     * @param sequenceFileLocation location of the sequence file
+     */
+    private static void addSequenceToRegistry(Registry registry, String customSequenceType, String sequenceFileName,
+                                              String sequenceFileLocation) throws APIImportException {
+
+        String regResourcePath = APIConstants.API_CUSTOM_SEQUENCE_LOCATION + File.separator + customSequenceType
+                                + File.separator + sequenceFileName;
+        InputStream inSeqStream = null;
+        try {
+            if (registry.resourceExists(regResourcePath)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Defined sequences have already been added to the registry");
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Adding defined sequences to the registry.");
+                }
+                File sequenceFile = new File(sequenceFileLocation);
+                inSeqStream = new FileInputStream(sequenceFile);
+                byte[] inSeqData = IOUtils.toByteArray(inSeqStream);
+                Resource inSeqResource = (Resource) registry.newResource();
+                inSeqResource.setContent(inSeqData);
+                registry.put(regResourcePath, inSeqResource);
+            }
+        } catch (RegistryException e) {
+            log.error("Failed to add sequences into the registry. ", e);
+            throw new APIImportException("Failed to add sequences into the registry. " + e.getMessage());
+        } catch (IOException e) {
+            log.error("I/O error while writing sequence data to the registry. ", e);
+            throw new APIImportException("I/O error while writing sequence data to the registry. " + e.getMessage());
+        } finally {
+            closeQuietly(inSeqStream);
         }
     }
 
@@ -405,3 +476,5 @@ public final class APIImportUtil {
         return testFile.exists();
     }
 }
+
+

@@ -18,15 +18,22 @@
 
 package apim.restful.importexport;
 
+import org.wso2.carbon.utils.CarbonUtils;
+
+import java.io.File;
+
 /**
  * This class contains all the constants required for API Import and Export
  */
 public final class APIImportExportConstants {
 
-    //name of the new folder
-    public static final String CREATED_FOLDER = "/ImportDirectory/";
+	//This is where archive file get generated for exporting API
+	public static final String BASE_ARCHIVE_PATH = CarbonUtils.getCarbonHome() + File.separator + "tmp" +
+	                                               File.separator + "work" ;
     //name of the provider
     public static final String PROVIDER_NAME = "admin";
+    //length of the name of the temporary
+    public static final int TEMP_FILENAME_LENGTH = 5;
     //name of the uploaded zip file
     public static final String UPLOAD_FILE_NAME = "APIArchive.zip";
     //location of the api JSON file
@@ -43,23 +50,18 @@ public final class APIImportExportConstants {
     public static final String URL_DOC_TYPE = "URL";
     //name of the physical file type
     public static final String FILE_DOC_TYPE = "FILE";
-    //name of the in sequence
-    public static final String IN_SEQUENCE_NAME = "log_in_message";
     //location of the in sequence
-    public static final String IN_SEQUENCE_LOCATION = "/Sequences/in-sequence/log_in_message.xml";
-    //name of the out sequence
-    public static final String OUT_SEQUENCE_NAME = "log_out_message";
+    public static final String IN_SEQUENCE_LOCATION = "/Sequences/in-sequence/";
     //location of the out sequence
-    public static final String OUT_SEQUENCE_LOCATION = "/Sequences/out-sequence/log_out_message.xml";
-    //name of the fault sequence
-    public static final String FAULT_SEQUENCE_NAME = "json_fault";
+    public static final String OUT_SEQUENCE_LOCATION = "/Sequences/out-sequence/";
     //location of the fault sequence
-    public static final String FAULT_SEQUENCE_LOCATION = "/Sequences/fault-sequence/json_fault.xml";
-	//sequence direction : in
+    public static final String FAULT_SEQUENCE_LOCATION = "/Sequences/fault-sequence/";
+    //sequence direction : in
 	public static final String SEQUENCE_DIRECTION_IN = "in";
 	//sequence direction : out
 	public static final String SEQUENCE_DIRECTION_OUT = "out";
 	//sequence direction : fault
 	public static final String SEQUENCE_DIRECTION_FAULT = "fault";
-
+    //extension of xml files
+    public static final String XML_EXTENSION = ".xml";
 }
