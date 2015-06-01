@@ -27,9 +27,9 @@ import java.io.File;
  */
 public final class APIImportExportConstants {
 
-	//This is where archive file get generated for exporting API
-	public static final String BASE_ARCHIVE_PATH = CarbonUtils.getCarbonHome() + File.separator + "tmp" +
-	                                               File.separator + "work" ;
+    //This is where archive file get generated for exporting API
+    public static final String BASE_ARCHIVE_PATH = CarbonUtils.getCarbonHome() + File.separator + "tmp" +
+            File.separator + "work" ;
     //name of the provider
     public static final String PROVIDER_NAME = "admin";
     //length of the name of the temporary
@@ -70,4 +70,3 @@ public final class APIImportExportConstants {
     public static final String SEQUENCE_DIRECTION_FAULT = "fault";
 
 }
-

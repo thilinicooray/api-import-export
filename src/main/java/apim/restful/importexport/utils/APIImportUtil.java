@@ -107,60 +107,60 @@ public final class APIImportUtil {
         }
     }
 
-	/**
-	 * This method decompresses API the archive
-	 *
-	 * @param sourceFile  The archive containing the API
-	 * @param destination location of the archive to be extracted
-	 * @return Name of the extracted directory
-	 * @throws APIImportException If the decompressing fails
-	 */
-	public static String extractArchive(File sourceFile, String destination)
-			throws APIImportException {
-		BufferedInputStream inputStream = null;
-		FileOutputStream outputStream = null;
-		String archiveName = null;
-		try {
-			ZipFile zip = new ZipFile(sourceFile);
-			Enumeration zipFileEntries = zip.entries();
-			int index = 0;
+    /**
+     * This method decompresses API the archive
+     *
+     * @param sourceFile  The archive containing the API
+     * @param destination location of the archive to be extracted
+     * @return Name of the extracted directory
+     * @throws APIImportException If the decompressing fails
+     */
+    public static String extractArchive(File sourceFile, String destination)
+            throws APIImportException {
+        BufferedInputStream inputStream = null;
+        FileOutputStream outputStream = null;
+        String archiveName = null;
+        try {
+            ZipFile zip = new ZipFile(sourceFile);
+            Enumeration zipFileEntries = zip.entries();
+            int index = 0;
 
-			// Process each entry
-			while (zipFileEntries.hasMoreElements()) {
+            // Process each entry
+            while (zipFileEntries.hasMoreElements()) {
 
-				// grab a zip file entry
-				ZipEntry entry = (ZipEntry) zipFileEntries.nextElement();
-				String currentEntry = entry.getName();
+                // grab a zip file entry
+                ZipEntry entry = (ZipEntry) zipFileEntries.nextElement();
+                String currentEntry = entry.getName();
 
                 //This index variable is used to get the extracted folder name; that is root directory
-				if (index == 0) {
-					archiveName = currentEntry.substring(0, currentEntry.indexOf('/'));
-					--index;
-				}
+                if (index == 0) {
+                    archiveName = currentEntry.substring(0, currentEntry.indexOf('/'));
+                    --index;
+                }
 
-				File destinationFile = new File(destination, currentEntry);
-				File destinationParent = destinationFile.getParentFile();
+                File destinationFile = new File(destination, currentEntry);
+                File destinationParent = destinationFile.getParentFile();
 
-				// create the parent directory structure if needed
-				destinationParent.mkdirs();
+                // create the parent directory structure if needed
+                destinationParent.mkdirs();
 
-				if (!entry.isDirectory()) {
-					inputStream = new BufferedInputStream(zip.getInputStream(entry));
+                if (!entry.isDirectory()) {
+                    inputStream = new BufferedInputStream(zip.getInputStream(entry));
 
-					// write the current file to disk
-					outputStream = new FileOutputStream(destinationFile);
-					IOUtils.copy(inputStream, outputStream);
-				}
-			}
-			return archiveName;
-		} catch (IOException e) {
-			log.error("Failed to extract archive file ", e);
-			throw new APIImportException("Failed to extract archive file. " + e.getMessage());
-		} finally {
-			closeQuietly(inputStream);
-			closeQuietly(outputStream);
-		}
-	}
+                    // write the current file to disk
+                    outputStream = new FileOutputStream(destinationFile);
+                    IOUtils.copy(inputStream, outputStream);
+                }
+            }
+            return archiveName;
+        } catch (IOException e) {
+            log.error("Failed to extract archive file ", e);
+            throw new APIImportException("Failed to extract archive file. " + e.getMessage());
+        } finally {
+            closeQuietly(inputStream);
+            closeQuietly(outputStream);
+        }
+    }
 
     /**
      * This method imports an API to the API store
@@ -357,7 +357,7 @@ public final class APIImportUtil {
                                               String sequenceFileLocation) throws APIImportException {
 
         String regResourcePath = APIConstants.API_CUSTOM_SEQUENCE_LOCATION + File.separator + customSequenceType
-                                + File.separator + sequenceFileName;
+                + File.separator + sequenceFileName;
         InputStream inSeqStream = null;
         try {
             if (registry.resourceExists(regResourcePath)) {
