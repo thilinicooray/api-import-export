@@ -43,7 +43,6 @@ import org.wso2.carbon.apimgt.impl.APIManagerFactory;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 
 import org.wso2.carbon.registry.api.Registry;
-import org.wso2.carbon.registry.api.RegistryException;
 import org.wso2.carbon.registry.core.Resource;
 
 import java.io.BufferedInputStream;
@@ -56,10 +55,11 @@ import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.io.IOException;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Enumeration;
 import java.util.Set;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import static org.apache.commons.io.IOUtils.closeQuietly;
@@ -107,65 +107,6 @@ public final class APIImportUtil {
         }
     }
 
-    /**
-     * This method decompresses API the archive
-     *
-     * @param sourceFile           the archive containing the API
-     * @param destinationDirectory location of the archive to be extracted
-     * @return the name of the extracted zip
-     * @throws APIImportException if the decompressing fails
-     */
-    public static String unzipArchive(File sourceFile, File destinationDirectory) throws APIImportException {
-
-        InputStream inputStream = null;
-        FileOutputStream fileOutputStream = null;
-        File destinationFile;
-        ZipFile zipfile = null;
-        String extractedFolder = null;
-
-        try {
-            zipfile = new ZipFile(sourceFile);
-            Enumeration zipEntries = null;
-            if (zipfile != null) {
-                zipEntries = zipfile.entries();
-            }
-            if (zipEntries != null) {
-                int index = 0;
-                while (zipEntries.hasMoreElements()) {
-                    ZipEntry entry = (ZipEntry) zipEntries.nextElement();
-
-                    if (entry.isDirectory()) {
-
-                        //This index variable is used to get the extracted folder name; that is root directory
-                        if (index == 0) {
-
-                            //Get the folder name without the '/' character at the end
-                            extractedFolder = entry.getName().substring(0, entry.getName().length() - 1);
-                        }
-                        index = -1;
-                        new File(destinationDirectory, entry.getName()).mkdir();
-                        continue;
-                    }
-                    inputStream = new BufferedInputStream(zipfile.getInputStream(entry));
-                    destinationFile = new File(destinationDirectory, entry.getName());
-                    fileOutputStream = new FileOutputStream(destinationFile);
-                    copyStreams(inputStream, fileOutputStream);
-                }
-            }
-        } catch (ZipException e) {
-            log.error("Failed to decompress API archive files. ", e);
-            throw new APIImportException("Failed to decompress API archive files. " + e.getMessage());
-        } catch (IOException e) {
-            log.error("I/O error while retrieving API files from the archive. ", e);
-            throw new APIImportException("I/O error while retrieving API files from the archive. " + e.getMessage());
-        } finally {
-            closeQuietly(zipfile);
-            closeQuietly(inputStream);
-            closeQuietly(fileOutputStream);
-        }
-        return extractedFolder;
-    }
-
 	/**
 	 * This method decompresses API the archive
 	 *
@@ -191,6 +132,7 @@ public final class APIImportUtil {
 				ZipEntry entry = (ZipEntry) zipFileEntries.nextElement();
 				String currentEntry = entry.getName();
 
+                //This index variable is used to get the extracted folder name; that is root directory
 				if (index == 0) {
 					archiveName = currentEntry.substring(0, currentEntry.indexOf('/'));
 					--index;
@@ -204,14 +146,13 @@ public final class APIImportUtil {
 
 				if (!entry.isDirectory()) {
 					inputStream = new BufferedInputStream(zip.getInputStream(entry));
+
 					// write the current file to disk
 					outputStream = new FileOutputStream(destinationFile);
 					IOUtils.copy(inputStream, outputStream);
 				}
 			}
-
 			return archiveName;
-
 		} catch (IOException e) {
 			log.error("Failed to extract archive file ", e);
 			throw new APIImportException("Failed to extract archive file. " + e.getMessage());
@@ -219,29 +160,7 @@ public final class APIImportUtil {
 			closeQuietly(inputStream);
 			closeQuietly(outputStream);
 		}
-
 	}
-
-    /**
-     * This method copies data from input stream and writes to output stream
-     *
-     * @param inStream  the input stream of the file to be written
-     * @param outStream the output stream of the file to be written
-     * @throws APIImportException if the files are not copied correctly
-     */
-
-    private static void copyStreams(InputStream inStream, FileOutputStream outStream) throws APIImportException {
-        int count;
-        byte data[] = new byte[1024];
-        try {
-            while ((count = inStream.read(data, 0, 1024)) != -1) {
-                outStream.write(data, 0, count);
-            }
-        } catch (IOException e) {
-            log.error("Failed to copy API archive files. ", e);
-            throw new APIImportException("Failed to copy API archive files. " + e.getMessage());
-        }
-    }
 
     /**
      * This method imports an API to the API store
@@ -276,10 +195,12 @@ public final class APIImportUtil {
                 //Remove the unsupported tiers before adding the API
                 importedApi.removeAvailableTiers(unsupportedTiersList);
             }
+
             provider.addAPI(importedApi);
             addAPIImage(pathToArchive, importedApi);
             addAPIDocuments(pathToArchive, importedApi, gson);
             addAPISequences(pathToArchive, importedApi);
+            addAPIWsdl(pathToArchive, importedApi);
 
         } catch (FileNotFoundException e) {
             log.error("Failed to locate file : " + APIImportExportConstants.JSON_FILE_LOCATION, e);
@@ -454,7 +375,7 @@ public final class APIImportUtil {
                 inSeqResource.setContent(inSeqData);
                 registry.put(regResourcePath, inSeqResource);
             }
-        } catch (RegistryException e) {
+        } catch (org.wso2.carbon.registry.api.RegistryException e) {
             log.error("Failed to add sequences into the registry. ", e);
             throw new APIImportException("Failed to add sequences into the registry. " + e.getMessage());
         } catch (IOException e) {
@@ -462,6 +383,40 @@ public final class APIImportUtil {
             throw new APIImportException("I/O error while writing sequence data to the registry. " + e.getMessage());
         } finally {
             closeQuietly(inSeqStream);
+        }
+    }
+
+    /**
+     * This method adds the WSDL to the registry, if there is a WSDL associated with the API
+     * @param pathToArchive location of the extracted folder of the API
+     * @param importedApi the imported API object
+     * @throws APIImportException if there is a URL error or registry error while storing the resource in registry
+     */
+    private static void addAPIWsdl(String pathToArchive, API importedApi) throws APIImportException {
+
+        String wsdlFileName = importedApi.getId().getApiName() + "-" + importedApi.getId().getVersion() +
+                APIImportExportConstants.WSDL_EXTENSION;
+        String wsdlPath = pathToArchive + APIImportExportConstants.WSDL_LOCATION + wsdlFileName;
+
+        if (checkFileExistence(wsdlPath)) {
+            try {
+                URL wsdlFileUrl = new File(wsdlPath).toURI().toURL();
+                importedApi.setWsdlUrl(wsdlFileUrl.toString());
+                Registry registry = APIExportUtil.getRegistry(APIImportExportConstants.PROVIDER_NAME);
+                APIUtil.createWSDL((org.wso2.carbon.registry.core.Registry) registry, importedApi);
+            } catch (MalformedURLException e) {
+                log.error("Error in getting WSDL URL. ", e);
+                throw new APIImportException("Error in getting WSDL URL. " + e.getMessage());
+            } catch (APIExportException e) {
+                log.error("Error in getting the registry instance to add WSDL. ", e);
+                throw new APIImportException("Error in getting the registry instance to add WSDL. " + e.getMessage());
+            } catch (org.wso2.carbon.registry.core.exceptions.RegistryException e) {
+                log.error("Error in putting the WSDL resource to registry. ", e);
+                throw new APIImportException("Error in putting the WSDL resource to registry. " + e.getMessage());
+            } catch (APIManagementException e) {
+                log.error("Error in creating the WSDL resource in the registry. ", e);
+                throw new APIImportException("Error in creating the WSDL resource in the registry. " + e.getMessage());
+            }
         }
     }
 

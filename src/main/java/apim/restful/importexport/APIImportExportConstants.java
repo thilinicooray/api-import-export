@@ -58,6 +58,10 @@ public final class APIImportExportConstants {
     public static final String FAULT_SEQUENCE_LOCATION = "/Sequences/fault-sequence/";
     //extension of xml files
     public static final String XML_EXTENSION = ".xml";
+    //location of the wsdl file
+    public static final String WSDL_LOCATION = "/WSDL/";
+    //extension of wsdl files
+    public static final String WSDL_EXTENSION = ".wsdl";
     //sequence direction : in
     public static final String SEQUENCE_DIRECTION_IN = "in";
     //sequence direction : out
