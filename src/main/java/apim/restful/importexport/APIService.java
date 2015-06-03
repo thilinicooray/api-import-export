@@ -18,12 +18,28 @@
 
 package apim.restful.importexport;
 
+
+import com.google.gson.Gson;
+import com.sun.jersey.multipart.FormDataParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.POST;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import javax.ws.rs.core.Response.Status;
+import java.io.File;
+import java.io.InputStream;
+
 import apim.restful.importexport.utils.APIExportUtil;
 import apim.restful.importexport.utils.APIImportUtil;
 import apim.restful.importexport.utils.ArchiveGeneratorUtil;
 import apim.restful.importexport.utils.AuthenticatorUtil;
-import com.google.gson.Gson;
-import com.sun.jersey.multipart.FormDataParam;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,15 +47,6 @@ import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.model.APIIdentifier;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-
-import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
-import java.io.File;
-import java.io.InputStream;
 
 /**
  * This class provides JAX-RS services for exporting and importing APIs.
@@ -114,9 +121,6 @@ import java.io.InputStream;
 
 			APIExportUtil.setArchiveBasePath(archiveBasePath);
 
-			//construct location for the exporting API
-			String archivePath = archiveBasePath.concat("/" + name + "-" + version);
-
 			Response ApiResourceRetrievalResponse =
 					APIExportUtil.retrieveApiToExport(apiIdentifier, userName);
 
@@ -145,38 +149,46 @@ import java.io.InputStream;
 
     }
 
-	/**
-	 * @param uploadedInputStream input stream from the REST request
-	 * @return response indicating the status of the process
-	 */
-	@POST @Path("/import-api") @Consumes(MediaType.MULTIPART_FORM_DATA) @Produces(MediaType.APPLICATION_JSON) public Response importAPI(
-			@FormDataParam("file") InputStream uploadedInputStream) {
+    /**
+     * This is the service which is used to import an API. All relevant API data will be included upon the creation of
+     * the API.
+     *
+     * @param uploadedInputStream input stream from the REST request
+     * @return response indicating the status of the process
+     */
+    @POST
+    @Path("/import-api")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream) {
 
-		try {
-			APIImportUtil.initializeProvider();
-			String currentDirectory = System.getProperty("user.dir");
-			String createdFolders = APIImportExportConstants.CREATED_FOLDER;
-			File folderPath = new File(currentDirectory + createdFolders);
-			boolean folderCreateStatus = folderPath.mkdirs();
+        try {
+            APIImportUtil.initializeProvider();
+            String currentDirectory = System.getProperty("java.io.tmpdir");
+            String createdFolders = "/" + RandomStringUtils.
+                    randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
+            File importFolder = new File(currentDirectory + createdFolders);
+            boolean folderCreateStatus = importFolder.mkdirs();
 
-			if (folderCreateStatus) {
-				String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
-				String absolutePath = currentDirectory + createdFolders;
-				APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
-				String extractedFolderName = APIImportUtil
-						.extractArchive(new File(absolutePath + uploadFileName), absolutePath);
-				APIImportUtil.importAPI(absolutePath + extractedFolderName);
-				return Response.status(Status.CREATED).build();
-			} else {
-				return Response.status(Status.BAD_REQUEST).build();
-			}
-		} catch (APIManagementException e) {
-			String errorDetail = new Gson().toJson(e.getMessage());
-			return Response.serverError().entity(errorDetail).build();
-		} catch (APIImportException e) {
-			String errorDetail = new Gson().toJson(e.getErrorDescription());
-			return Response.serverError().entity(errorDetail).build();
-		}
-	}
+            if (folderCreateStatus) {
+                String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
+                String absolutePath = currentDirectory + createdFolders;
+                APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
+                String extractedFolderName = APIImportUtil.extractArchive(new File(absolutePath + uploadFileName),
+                        absolutePath);
+                APIImportUtil.importAPI(absolutePath + extractedFolderName);
+                importFolder.deleteOnExit();
+                return Response.status(Status.CREATED).build();
+            } else {
+                return Response.status(Status.BAD_REQUEST).build();
+            }
+        } catch (APIManagementException e) {
+            String errorDetail = new Gson().toJson(e.getMessage());
+            return Response.serverError().entity(errorDetail).build();
+        } catch (APIImportException e) {
+            String errorDetail = new Gson().toJson(e.getErrorDescription());
+            return Response.serverError().entity(errorDetail).build();
+        }
+    }
 
 }
