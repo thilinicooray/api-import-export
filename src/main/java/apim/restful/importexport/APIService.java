@@ -24,6 +24,7 @@ import apim.restful.importexport.utils.ArchiveGeneratorUtil;
 import apim.restful.importexport.utils.AuthenticatorUtil;
 import com.google.gson.Gson;
 import com.sun.jersey.multipart.FormDataParam;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.apimgt.api.APIManagementException;
@@ -38,9 +39,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 
 /**
  * This class provides JAX-RS services for exporting and importing APIs.
@@ -105,8 +104,13 @@ import java.nio.file.Files;
 					new APIIdentifier(APIUtil.replaceEmailDomainBack(providerName), name, version);
 
 			//create temp location for storing API data to generate archive
-			java.nio.file.Path tempDirPath = Files.createTempDirectory("archiveLocation");
-			String archiveBasePath = tempDirPath.toString();
+			//java.nio.file.Path tempDirPath = Files.createTempDirectory("archiveLocation");
+            String currentDirectory = System.getProperty("java.io.tmpdir");
+            String createdFolders = "/" + RandomStringUtils.
+                    randomAlphanumeric(5) + "/";
+            File importFolder = new File(currentDirectory + createdFolders);
+            APIExportUtil.createDirectory(importFolder.getPath());
+			String archiveBasePath = importFolder.toString();
 
 			APIExportUtil.setArchiveBasePath(archiveBasePath);
 
@@ -122,7 +126,7 @@ import java.nio.file.Files;
 				return ApiResourceRetrievalResponse;
 			}
 
-			ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
+            ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
 
 			log.info("API" + name + "-" + version + " exported successfully");
 
@@ -137,14 +141,9 @@ import java.nio.file.Files;
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
 							build();
-		} catch (IOException e) {
-			log.error("IOException occurred while exporting ", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
-							build();
 		}
 
-	}
+    }
 
 	/**
 	 * @param uploadedInputStream input stream from the REST request
