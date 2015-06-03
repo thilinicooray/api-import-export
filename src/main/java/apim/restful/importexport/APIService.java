@@ -35,9 +35,7 @@ import javax.ws.rs.core.Response;
 
 import javax.ws.rs.core.Response.Status;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 
 import apim.restful.importexport.utils.APIExportUtil;
 import apim.restful.importexport.utils.APIImportUtil;
@@ -114,7 +112,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 					new APIIdentifier(APIUtil.replaceEmailDomainBack(providerName), name, version);
 
 			//create temp location for storing API data to generate archive
-			//java.nio.file.Path tempDirPath = Files.createTempDirectory("archiveLocation");
             String currentDirectory = System.getProperty("java.io.tmpdir");
             String createdFolders = "/" + RandomStringUtils.
                     randomAlphanumeric(5) + "/";
@@ -123,9 +120,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 			String archiveBasePath = importFolder.toString();
 
 			APIExportUtil.setArchiveBasePath(archiveBasePath);
-
-			//construct location for the exporting API
-			String archivePath = archiveBasePath.concat("/" + name + "-" + version);
 
 			Response ApiResourceRetrievalResponse =
 					APIExportUtil.retrieveApiToExport(apiIdentifier, userName);
@@ -148,11 +142,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 		} catch (APIExportException e) {
 			log.error("APIExportException occurred while exporting ", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
-							build();
-		} catch (IOException e) {
-			log.error("IOException occurred while exporting ", e);
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
 			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
 							build();
