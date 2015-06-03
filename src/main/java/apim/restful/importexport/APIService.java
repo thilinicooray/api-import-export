@@ -114,8 +114,13 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 					new APIIdentifier(APIUtil.replaceEmailDomainBack(providerName), name, version);
 
 			//create temp location for storing API data to generate archive
-			java.nio.file.Path tempDirPath = Files.createTempDirectory("archiveLocation");
-			String archiveBasePath = tempDirPath.toString();
+			//java.nio.file.Path tempDirPath = Files.createTempDirectory("archiveLocation");
+            String currentDirectory = System.getProperty("java.io.tmpdir");
+            String createdFolders = "/" + RandomStringUtils.
+                    randomAlphanumeric(5) + "/";
+            File importFolder = new File(currentDirectory + createdFolders);
+            APIExportUtil.createDirectory(importFolder.getPath());
+			String archiveBasePath = importFolder.toString();
 
 			APIExportUtil.setArchiveBasePath(archiveBasePath);
 
@@ -131,7 +136,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 				return ApiResourceRetrievalResponse;
 			}
 
-			ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
+            ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
 
 			log.info("API" + name + "-" + version + " exported successfully");
 
@@ -153,7 +158,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 							build();
 		}
 
-	}
+    }
 
     /**
      * This is the service which is used to import an API. All relevant API data will be included upon the creation of
