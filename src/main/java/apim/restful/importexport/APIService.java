@@ -170,18 +170,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
             if (!(Response.Status.OK.getStatusCode() == authorizationResponse.getStatus())) {
                 return authorizationResponse;
-            }
-
-            String userName = AuthenticatorUtil.getAuthenticatedUserName();
-            //provider names with @ signs are only accepted
-            String apiDomain = MultitenantUtils.getTenantDomain(APIImportExportConstants.PROVIDER_NAME);
-            String apiRequesterDomain = MultitenantUtils.getTenantDomain(userName);
-            //Allows to export APIs created only in current tenant domain
-            if (!apiDomain.equals(apiRequesterDomain)) {
-                //not authorized to import API
-                log.error("Not authorized to import API.");
-                return Response.status(Response.Status.FORBIDDEN).entity("Not authorized to import API.")
-                        .type(MediaType.APPLICATION_JSON).build();
             } else {
                 try {
                     APIImportUtil.initializeProvider();
