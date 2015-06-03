@@ -30,6 +30,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.apimgt.api.APIDefinition;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.FaultGatewaysException;
@@ -40,6 +41,7 @@ import org.wso2.carbon.apimgt.api.model.Icon;
 import org.wso2.carbon.apimgt.api.model.Tier;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
+import org.wso2.carbon.apimgt.impl.definitions.APIDefinitionFromSwagger20;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 
 import org.wso2.carbon.registry.api.Registry;
@@ -115,8 +117,8 @@ public final class APIImportUtil {
      * @return Name of the extracted directory
      * @throws APIImportException If the decompressing fails
      */
-    public static String extractArchive(File sourceFile, String destination)
-            throws APIImportException {
+    public static String extractArchive(File sourceFile, String destination) throws APIImportException {
+
         BufferedInputStream inputStream = null;
         FileOutputStream outputStream = null;
         String archiveName = null;
@@ -201,6 +203,7 @@ public final class APIImportUtil {
             addAPIDocuments(pathToArchive, importedApi, gson);
             addAPISequences(pathToArchive, importedApi);
             addAPIWsdl(pathToArchive, importedApi);
+            addSwaggerDefinition(importedApi);
 
         } catch (FileNotFoundException e) {
             log.error("Failed to locate file : " + APIImportExportConstants.JSON_FILE_LOCATION, e);
@@ -240,7 +243,6 @@ public final class APIImportUtil {
                 }
             }
         } catch (FileNotFoundException e) {
-
             //This is logged and process is continued because icon is optional for an API
             log.error("Icon for API is not found", e);
         } catch (FaultGatewaysException e) {
@@ -257,7 +259,9 @@ public final class APIImportUtil {
      * @param gson          object related to the API data
      * @throws org.wso2.carbon.apimgt.api.APIManagementException if the document addition fails
      */
-    private static void addAPIDocuments(String pathToArchive, API importedApi, Gson gson) throws APIManagementException {
+    private static void addAPIDocuments(String pathToArchive, API importedApi, Gson gson)
+            throws APIManagementException {
+
         String docFileLocation = pathToArchive + APIImportExportConstants.DOCUMENT_FILE_LOCATION;
         APIIdentifier apiIdentifier = importedApi.getId();
 
@@ -417,6 +421,21 @@ public final class APIImportUtil {
                 log.error("Error in creating the WSDL resource in the registry. ", e);
                 throw new APIImportException("Error in creating the WSDL resource in the registry. " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * This method creates the swagger definition for the API
+     * @param importedApi the imported API object
+     */
+    private static void addSwaggerDefinition(API importedApi) throws APIImportException {
+        APIDefinition definitionFromSwagger20 = new APIDefinitionFromSwagger20();
+        try {
+            String apiDefinitionJSON = definitionFromSwagger20.generateAPIDefinition(importedApi);
+            provider.saveSwagger20Definition(importedApi.getId(), apiDefinitionJSON);
+        } catch (APIManagementException e) {
+            log.error("Error in creating the Swagger definition for the API. ", e);
+            throw new APIImportException("Error in creating the Swagger definition for the API. " + e.getMessage());
         }
     }
 

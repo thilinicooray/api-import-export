@@ -68,8 +68,10 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 	 * @param providerName Provider name of the API that needs to be exported
 	 * @return Zipped API as the response to the service call
 	 */
-	@GET @Path("/export-api") @Produces("application/zip") public Response exportAPI(
-			@QueryParam("name") String name, @QueryParam("version") String version,
+	@GET
+    @Path("/export-api")
+    @Produces("application/zip")
+    public Response exportAPI(@QueryParam("name") String name, @QueryParam("version") String version,
 			@QueryParam("provider") String providerName, @Context HttpHeaders httpHeaders) {
 
 		String userName;
@@ -160,35 +162,58 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
     @Path("/import-api")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream) {
+    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream,
+                              @Context HttpHeaders httpHeaders) {
 
         try {
-            APIImportUtil.initializeProvider();
-            String currentDirectory = System.getProperty("java.io.tmpdir");
-            String createdFolders = "/" + RandomStringUtils.
-                    randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
-            File importFolder = new File(currentDirectory + createdFolders);
-            boolean folderCreateStatus = importFolder.mkdirs();
+            Response authorizationResponse = AuthenticatorUtil.authorizeUser(httpHeaders);
 
-            if (folderCreateStatus) {
-                String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
-                String absolutePath = currentDirectory + createdFolders;
-                APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
-                String extractedFolderName = APIImportUtil.extractArchive(new File(absolutePath + uploadFileName),
-                        absolutePath);
-                APIImportUtil.importAPI(absolutePath + extractedFolderName);
-                importFolder.deleteOnExit();
-                return Response.status(Status.CREATED).build();
-            } else {
-                return Response.status(Status.BAD_REQUEST).build();
+            if (!(Response.Status.OK.getStatusCode() == authorizationResponse.getStatus())) {
+                return authorizationResponse;
             }
-        } catch (APIManagementException e) {
-            String errorDetail = new Gson().toJson(e.getMessage());
-            return Response.serverError().entity(errorDetail).build();
-        } catch (APIImportException e) {
-            String errorDetail = new Gson().toJson(e.getErrorDescription());
-            return Response.serverError().entity(errorDetail).build();
+
+            String userName = AuthenticatorUtil.getAuthenticatedUserName();
+            //provider names with @ signs are only accepted
+            String apiDomain = MultitenantUtils.getTenantDomain(APIImportExportConstants.PROVIDER_NAME);
+            String apiRequesterDomain = MultitenantUtils.getTenantDomain(userName);
+            //Allows to export APIs created only in current tenant domain
+            if (!apiDomain.equals(apiRequesterDomain)) {
+                //not authorized to import API
+                log.error("Not authorized to import API.");
+                return Response.status(Response.Status.FORBIDDEN).entity("Not authorized to import API.")
+                        .type(MediaType.APPLICATION_JSON).build();
+            } else {
+                try {
+                    APIImportUtil.initializeProvider();
+                    String currentDirectory = System.getProperty("java.io.tmpdir");
+                    String createdFolders = "/" + RandomStringUtils.
+                            randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
+                    File importFolder = new File(currentDirectory + createdFolders);
+                    boolean folderCreateStatus = importFolder.mkdirs();
+
+                    if (folderCreateStatus) {
+                        String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
+                        String absolutePath = currentDirectory + createdFolders;
+                        APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
+                        String extractedFolderName = APIImportUtil.extractArchive(new File(absolutePath + uploadFileName),
+                                absolutePath);
+                        APIImportUtil.importAPI(absolutePath + extractedFolderName);
+                        importFolder.deleteOnExit();
+                        return Response.status(Status.CREATED).build();
+                    } else {
+                        return Response.status(Status.BAD_REQUEST).build();
+                    }
+                }
+                catch (APIManagementException e) {
+                    String errorDetail = new Gson().toJson(e.getMessage());
+                    return Response.serverError().entity(errorDetail).build();
+                } catch (APIImportException e) {
+                    String errorDetail = new Gson().toJson(e.getErrorDescription());
+                    return Response.serverError().entity(errorDetail).build();
+                }
+            }
+        } catch (APIExportException e) {
+            return Response.status(Status.FORBIDDEN).entity("Not authorized to import API.").build();
         }
     }
-
 }
