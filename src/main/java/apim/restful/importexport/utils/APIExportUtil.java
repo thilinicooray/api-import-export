@@ -201,7 +201,8 @@ public class APIExportUtil {
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		// convert java object to JSON format,
 		// and return as JSON formatted string
-		String json = gson.toJson(mapToAPIModel(apiToReturn, registry));
+		//String json = gson.toJson(mapToAPIModel(apiToReturn, registry));
+        String json = gson.toJson(apiToReturn);
 
 		APIExportUtil.createDirectory(archivePath + "/Meta-information");
 		try {

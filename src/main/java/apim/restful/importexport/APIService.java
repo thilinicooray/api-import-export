@@ -21,6 +21,7 @@ package apim.restful.importexport;
 
 import com.google.gson.Gson;
 import com.sun.jersey.multipart.FormDataParam;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.POST;
@@ -111,7 +112,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 					new APIIdentifier(APIUtil.replaceEmailDomainBack(providerName), name, version);
 
 			//create temp location for storing API data to generate archive
-			//java.nio.file.Path tempDirPath = Files.createTempDirectory("archiveLocation");
             String currentDirectory = System.getProperty("java.io.tmpdir");
             String createdFolders = "/" + RandomStringUtils.
                     randomAlphanumeric(5) + "/";
