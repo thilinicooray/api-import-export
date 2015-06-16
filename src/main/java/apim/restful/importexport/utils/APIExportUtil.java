@@ -20,7 +20,14 @@ package apim.restful.importexport.utils;
 
 import apim.restful.importexport.APIExportException;
 import apim.restful.importexport.APIImportExportConstants;
-import com.google.gson.*;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -49,7 +56,16 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.stream.XMLStreamException;
-import java.io.*;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.StringReader;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
