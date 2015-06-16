@@ -19,8 +19,14 @@
 package apim.restful.importexport.utils;
 
 import apim.restful.importexport.APIExportException;
-import apim.restful.importexport.APIImportExportConstants;
-import com.google.gson.*;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -49,7 +55,16 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.stream.XMLStreamException;
-import java.io.*;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.StringReader;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -428,15 +443,15 @@ public class APIExportUtil {
 		Map<String, String> sequences = new HashMap<String, String>();
 
 		if (api.getInSequence() != null) {
-			sequences.put(APIImportExportConstants.SEQUENCE_DIRECTION_IN, api.getInSequence());
+			sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN, api.getInSequence());
 		}
 
 		if (api.getOutSequence() != null) {
-			sequences.put(APIImportExportConstants.SEQUENCE_DIRECTION_OUT, api.getOutSequence());
+			sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT, api.getOutSequence());
 		}
 
 		if (api.getOutSequence() != null) {
-			sequences.put(APIImportExportConstants.SEQUENCE_DIRECTION_FAULT, api.getFaultSequence());
+			sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT, api.getFaultSequence());
 		}
 
 		if (!sequences.isEmpty()) {
@@ -452,25 +467,25 @@ public class APIExportUtil {
 					sequenceName = sequence.getValue();
 					direction = sequence.getKey();
 					if (sequenceName != null) {
-						if (APIImportExportConstants.SEQUENCE_DIRECTION_IN
+						if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN
 								.equalsIgnoreCase(direction)) {
 							sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
-							                                           APIImportExportConstants.SEQUENCE_DIRECTION_IN);
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN);
 							writeSequenceToFile(sequenceConfig, sequenceName,
-							                    APIImportExportConstants.SEQUENCE_DIRECTION_IN,
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
 							                    apiIdentifier);
-						} else if (APIImportExportConstants.SEQUENCE_DIRECTION_OUT
+						} else if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT
 								.equalsIgnoreCase(direction)) {
 							sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
-							                                           APIImportExportConstants.SEQUENCE_DIRECTION_OUT);
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT);
 							writeSequenceToFile(sequenceConfig, sequenceName,
-							                    APIImportExportConstants.SEQUENCE_DIRECTION_OUT,
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
 							                    apiIdentifier);
 						} else {
 							sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
-							                                           APIImportExportConstants.SEQUENCE_DIRECTION_FAULT);
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT);
 							writeSequenceToFile(sequenceConfig, sequenceName,
-							                    APIImportExportConstants.SEQUENCE_DIRECTION_FAULT,
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
 							                    apiIdentifier);
 						}
 					}

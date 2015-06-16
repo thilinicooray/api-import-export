@@ -62,11 +62,5 @@ public final class APIImportExportConstants {
     public static final String WSDL_LOCATION = "/WSDL/";
     //extension of wsdl files
     public static final String WSDL_EXTENSION = ".wsdl";
-    //sequence direction : in
-    public static final String SEQUENCE_DIRECTION_IN = "in";
-    //sequence direction : out
-    public static final String SEQUENCE_DIRECTION_OUT = "out";
-    //sequence direction : fault
-    public static final String SEQUENCE_DIRECTION_FAULT = "fault";
 
 }

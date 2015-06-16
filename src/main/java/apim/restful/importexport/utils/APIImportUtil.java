@@ -59,6 +59,7 @@ import java.io.IOException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.Enumeration;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -230,14 +231,15 @@ public final class APIImportUtil {
             if (imageFolder.isDirectory() && imageFolder.listFiles() != null && imageFolder.listFiles().length > 0) {
                 for (File imageFile : imageFolder.listFiles()) {
                     if (imageFile.getName().contains(APIImportExportConstants.IMAGE_FILE_NAME)) {
-                        String fileExtension = FilenameUtils.getExtension(imageFile.getAbsolutePath());
+                        String mimeType = URLConnection.guessContentTypeFromName(imageFile.getName());
                         FileInputStream inputStream = new FileInputStream(imageFile.getAbsolutePath());
-                        Icon apiImage = new Icon(inputStream, fileExtension);
-                        String imageRegistryLocation = provider.addIcon(imageFile.getAbsolutePath(), apiImage);
-                        importedApi.setThumbnailUrl(APIUtil.prependTenantPrefix(imageRegistryLocation,
+                        Icon apiImage = new Icon(inputStream, mimeType);
+                        String thumbPath = APIUtil.getIconPath(importedApi.getId());
+                        String thumbnailUrl = provider.addIcon(thumbPath, apiImage);
+                        importedApi.setThumbnailUrl(APIUtil.prependTenantPrefix(thumbnailUrl,
                                 importedApi.getId().getProviderName()));
                         APIUtil.setResourcePermissions(importedApi.getId().getProviderName(), null, null,
-                                imageRegistryLocation);
+                                thumbPath);
                         provider.updateAPI(importedApi);
                     }
                 }
