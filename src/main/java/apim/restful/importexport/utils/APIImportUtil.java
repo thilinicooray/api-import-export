@@ -26,11 +26,11 @@ import apim.restful.importexport.APIService;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.apimgt.api.APIDefinition;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.FaultGatewaysException;
@@ -41,7 +41,6 @@ import org.wso2.carbon.apimgt.api.model.Icon;
 import org.wso2.carbon.apimgt.api.model.Tier;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.APIManagerFactory;
-import org.wso2.carbon.apimgt.impl.definitions.APIDefinitionFromSwagger20;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 
 import org.wso2.carbon.registry.api.Registry;
@@ -204,7 +203,7 @@ public final class APIImportUtil {
             addAPIDocuments(pathToArchive, importedApi, gson);
             addAPISequences(pathToArchive, importedApi);
             addAPIWsdl(pathToArchive, importedApi);
-            addSwaggerDefinition(importedApi);
+            addSwaggerDefinition(importedApi.getId(), pathToArchive);
 
         } catch (FileNotFoundException e) {
             log.error("Failed to locate file : " + APIImportExportConstants.JSON_FILE_LOCATION, e);
@@ -427,17 +426,25 @@ public final class APIImportUtil {
     }
 
     /**
-     * This method creates the swagger definition for the API
-     * @param importedApi the imported API object
+     * This method adds Swagger API definition to registry
+     * @param apiId Identifier of the imported API
+     * @param archivePath File path where API archive stored
+     * @throws APIImportException if there is an error occurs when adding Swagger definition
      */
-    private static void addSwaggerDefinition(API importedApi) throws APIImportException {
-        APIDefinition definitionFromSwagger20 = new APIDefinitionFromSwagger20();
+    private static void addSwaggerDefinition(APIIdentifier apiId, String archivePath)
+            throws APIImportException {
         try {
-            String apiDefinitionJSON = definitionFromSwagger20.generateAPIDefinition(importedApi);
-            provider.saveSwagger20Definition(importedApi.getId(), apiDefinitionJSON);
+            String swaggerContent = FileUtils.readFileToString(
+                    new File (archivePath + APIImportExportConstants.SWAGGER_DEFINITION_LOCATION));
+            provider.saveSwagger20Definition(apiId, swaggerContent);
         } catch (APIManagementException e) {
-            log.error("Error in creating the Swagger definition for the API. ", e);
-            throw new APIImportException("Error in creating the Swagger definition for the API. " + e.getMessage());
+            log.error("Error in adding Swagger definition for the API. ", e);
+            throw new APIImportException("Error in adding Swagger definition for the API. " +
+                    e.getMessage());
+        } catch (IOException e) {
+            log.error("Error in importing Swagger definition for the API. ", e);
+            throw new APIImportException("Error in importing Swagger definition for the API. " +
+                    e.getMessage());
         }
     }
 
