@@ -22,10 +22,6 @@ import apim.restful.importexport.APIExportException;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.io.IOUtils;
@@ -160,7 +156,6 @@ public class APIExportUtil {
 			throws APIExportException {
 
 		API apiToReturn;
-		FileWriter writer = null;
 		String archivePath = archiveBasePath.concat("/" + apiID.getApiName() + "-" +
 		                                            apiID.getVersion());
 		//initializing provider
@@ -213,31 +208,13 @@ public class APIExportUtil {
 		//set API status to created
 		apiToReturn.setStatus(APIStatus.CREATED);
 
-		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		// convert java object to JSON format,
-		// and return as JSON formatted string
-		//String json = gson.toJson(mapToAPIModel(apiToReturn, registry));
-        String json = gson.toJson(apiToReturn);
-
-		APIExportUtil.createDirectory(archivePath + "/Meta-information");
-		try {
-
-			writer = new FileWriter(archivePath + "/Meta-information/" + "api.json");
-			IOUtils.copy(new StringReader(json), writer);
-		} catch (IOException e) {
-			log.error("I/O error while writing API Meta information to file", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
-							build();
-		} finally {
-			IOUtils.closeQuietly(writer);
-		}
+        exportMetaInformation(apiToReturn, registry);
 
 		return Response.ok().build();
 
 	}
 
-	/**
+    /**
 	 * Retrieve thumbnail image for the exporting API and store it in the archive directory
 	 *
 	 * @param apiIdentifier ID of the requesting API
@@ -335,7 +312,6 @@ public class APIExportUtil {
 		createDirectory(archivePath + "/Docs");
 		InputStream fileInputStream = null;
 		OutputStream outputStream = null;
-		FileWriter writer = null;
 		try {
 			for (Documentation doc : docList) {
 				String sourceType = doc.getSourceType().name();
@@ -361,8 +337,7 @@ public class APIExportUtil {
 			}
 
 			String json = gson.toJson(docList);
-			writer = new FileWriter(archivePath + "/Docs/docs.json");
-			IOUtils.copy(new StringReader(json), writer);
+            writeFile(archivePath + "/Docs/docs.json", json);
 
 			if (log.isDebugEnabled()) {
 				log.debug("API Documentation retrieved successfully");
@@ -377,7 +352,6 @@ public class APIExportUtil {
 		} finally {
 			IOUtils.closeQuietly(fileInputStream);
 			IOUtils.closeQuietly(outputStream);
-			IOUtils.closeQuietly(writer);
 		}
 	}
 
@@ -554,76 +528,60 @@ public class APIExportUtil {
 		}
 	}
 
-	/**
-	 * Meta information of the exporting API is converted to json and stored in the archive
-	 * API definition provided in http://hevayo.github.io/restful-apim is manipulated as the schema
-	 * for exporting API meta information
-	 * This method is used for mapping org.wso2.carbon.apimgt.api.model.API to Swagger API
-	 * definition
-	 *
-	 * @param api exporting API
-	 * @return Map<String,Object> API meta information according to Swagger API definition
-	 * @throws APIExportException If an error occurs while retrieving Swagger documents of the API
-	 */
+    /**
+     * Retrieve meta information of the API to export
+     * URL template information are stored in swagger.json definition while rest of the required
+     * data are in api.json
+     *
+     * @param apiToReturn  API to be exported
+     * @param registry Current tenant registry
+     * @throws APIExportException If an error occurs while exporting meta information
+     */
+    private static void exportMetaInformation(API apiToReturn, Registry registry)
+            throws APIExportException {
+        APIDefinition definitionFromSwagger20 = new APIDefinitionFromSwagger20();
+        String archivePath = archiveBasePath
+                .concat("/" + apiToReturn.getId().getApiName() + "-" +
+                        apiToReturn.getId().getVersion());
 
-	public static Map<String, Object> mapToAPIModel(API api, Registry registry)
-			throws APIExportException {
-		Map<String, Object> mappedAPI = new HashMap<String, Object>();
-		APIDefinition definitionFromSwagger20 = new APIDefinitionFromSwagger20();
+        createDirectory(archivePath + "/Meta-information");
 
-		try {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        // convert java object to JSON format,
+        // and return as JSON formatted string
+        String apiInJson = gson.toJson(apiToReturn);
+        writeFile(archivePath + "/Meta-information/" + "api.json", apiInJson);
 
-			mappedAPI.put("context", api.getContext());
-			mappedAPI.put("endpoint", getEndpointConfig(api.getEndpointConfig()));
-			mappedAPI.put("isDefaultVersion", String.valueOf(api.isDefaultVersion()));
-			mappedAPI.put("name", api.getId().getApiName());
-			mappedAPI.put("provider", api.getId().getProviderName());
-			mappedAPI.put("responseCaching", api.getResponseCache());
-			mappedAPI.put("status", api.getStatus().name());
-			mappedAPI.put("swagger",
-			              definitionFromSwagger20.getAPIDefinition(api.getId(), registry));
-			mappedAPI.put("tier", api.getId().getTier());
-			String[] transport = api.getTransports().split(",");
-			mappedAPI.put("transport", transport);
-			mappedAPI.put("version", api.getId().getVersion());
-			mappedAPI.put("visibility", api.getVisibility());
+        try {
+            String swaggerDefinition =
+                    definitionFromSwagger20.getAPIDefinition(apiToReturn.getId(), registry);
+            writeFile(archivePath + "/Meta-information/" + "swagger.json", swaggerDefinition);
+        } catch (APIManagementException e) {
+            log.error("Error while retrieving Swagger definition" + e.getMessage());
+            throw new APIExportException("Error while retrieving Swagger definition", e);
+        }
+    }
 
-			return mappedAPI;
-		} catch (APIManagementException e) {
-			log.error("Error while retrieving Swagger definition" + e.getMessage());
-			throw new APIExportException("Error while retrieving Swagger definition", e);
-		}
-	}
+    /**
+     * Write content to file
+     *
+     * @param path Location of the file
+     * @param content Content to be written
+     * @throws APIExportException If an error occurs while writing to file
+     */
+    private static void writeFile(String path, String content) throws APIExportException {
+        FileWriter writer = null;
 
-	/**
-	 * This method manipulates endpoint configuration string of the API and outputs a hash map of
-	 * endpoint url, sandbox url and endpoint type
-	 *
-	 * @param endpointConfigString Endpoint configuration of the API
-	 * @return Hash map of endpoint configuration details
-	 */
-	private static Map<String, String> getEndpointConfig(String endpointConfigString) {
+        try {
+            writer = new FileWriter(path);
+            IOUtils.copy(new StringReader(content), writer);
+        } catch (IOException e) {
+            log.error("I/O error while writing to file" + e.getMessage());
+            throw new APIExportException("I/O error while writing to file", e);
+        }  finally {
+            IOUtils.closeQuietly(writer);
+        }
 
-		if (endpointConfigString != null) {
-			Map<String, String> endpointConfig = new HashMap<String, String>();
-			JsonElement configElement = new JsonParser().parse(endpointConfigString);
-			JsonObject configObject = configElement.getAsJsonObject();
-			JsonObject productionEndpoint = configObject.getAsJsonObject("production_endpoints");
-			endpointConfig.put("production", productionEndpoint.getAsJsonPrimitive("url").toString()
-			                                                   .replaceAll("\"", ""));
-			JsonObject sandboxEndpoint = configObject.getAsJsonObject("sandbox_endpoints");
+    }
 
-			if (sandboxEndpoint != null) {
-				endpointConfig.put("sandbox", sandboxEndpoint.getAsJsonPrimitive("url").toString()
-				                                             .replaceAll("\"", ""));
-			}
-
-			JsonPrimitive endpointType = configObject.getAsJsonPrimitive("endpoint_type");
-			endpointConfig.put("type", endpointType.toString().replaceAll("\"", ""));
-
-			return endpointConfig;
-		}
-
-		return new HashMap<String, String>();
-	}
 }

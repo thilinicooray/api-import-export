@@ -18,10 +18,6 @@
 
 package apim.restful.importexport;
 
-import org.wso2.carbon.utils.CarbonUtils;
-
-import java.io.File;
-
 /**
  * This class contains all the constants required for API Import and Export
  */
