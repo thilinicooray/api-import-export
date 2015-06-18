@@ -26,6 +26,9 @@ import apim.restful.importexport.APIService;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -76,7 +79,8 @@ public final class APIImportUtil {
     /**
      * This method initializes the Provider when there is a direct request to import an API
      *
-     * @throws org.wso2.carbon.apimgt.api.APIManagementException if the provider cannot be initialized
+     * @param currentUserName the current logged in user
+     * @throws APIExportException if provider cannot be initialized
      */
     public static void initializeProvider(String currentUserName) throws APIExportException {
         provider = APIExportUtil.getProvider(currentUserName);
@@ -167,6 +171,7 @@ public final class APIImportUtil {
      * This method imports an API to the API store
      *
      * @param pathToArchive location of the extracted folder of the API
+     * @param currentUser the current logged in user
      * @throws APIImportException     if the tiers are not supported or if api.json is not found
      * @throws APIManagementException if the resource addition to API fails
      */
@@ -179,8 +184,10 @@ public final class APIImportUtil {
 
         try {
             inputStream = new FileInputStream(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION);
-            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-            API importedApi = gson.fromJson(bufferedReader, API.class);
+            API importedApi = setApiProviderToCurrentUser(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION, currentUser);
+            //bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+            //API importedApi = gson.fromJson(bufferedReader, API.class);
             Set<Tier> allowedTiers = provider.getTiers();
             boolean isAllTiersAvailable = allowedTiers.containsAll(importedApi.getAvailableTiers());
 
@@ -198,6 +205,9 @@ public final class APIImportUtil {
                 importedApi.removeAvailableTiers(unsupportedTiersList);
             }
 
+            //APIIdentifier x= importedApi.getId();
+            //x.set
+//importedApi.set
             provider.addAPI(importedApi);
             addAPIImage(pathToArchive, importedApi);
             addAPIDocuments(pathToArchive, importedApi, gson);
@@ -214,12 +224,41 @@ public final class APIImportUtil {
         }
     }
 
+    private static API setApiProviderToCurrentUser(String path, String userName) {
+        try {
+            String jsonContent = FileUtils.readFileToString(new File (path));
+            JsonElement configElement = new JsonParser().parse(jsonContent);
+            JsonObject configObject = configElement.getAsJsonObject();
+            JsonObject apiId = configObject.getAsJsonObject("id");
+            apiId.addProperty("providerName", APIUtil.replaceEmailDomain(userName));
+            Gson gson = new Gson();
+            API importedAPI = gson.fromJson(configElement, API.class);
+            return importedAPI;
+
+
+            /*JsonObject sandboxEndpoint = configObject.getAsJsonObject("sandbox_endpoints");
+
+            if (sandboxEndpoint != null) {
+                endpointConfig.put("sandbox", sandboxEndpoint.getAsJsonPrimitive("url").toString()
+                        .replaceAll("\"", ""));
+            }
+
+            JsonPrimitive endpointType = configObject..getAsJsonPrimitive("endpoint_type");
+            endpointConfig.put("type", endpointType.toString().replaceAll("\"", ""));*/
+
+        } catch (IOException e) {
+            e.printStackTrace();
+
+        }
+        return null;
+    }
+
     /**
      * This method adds the icon to the API which is to be displayed at the API store.
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
-     * @throws APIManagementException by org.wso2.carbon.apimgt.api.APIManagementException
+     * @throws org.wso2.carbon.apimgt.api.APIManagementException if API update fails after adding the image
      */
     private static void addAPIImage(String pathToArchive, API importedApi) throws APIManagementException {
 
@@ -280,7 +319,8 @@ public final class APIImportUtil {
                         provider.addDocumentationContent(importedApi, doc.getName(), doc.getSummary());
                     } else if (APIImportExportConstants.URL_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         provider.addDocumentation(apiIdentifier, doc);
-                    } else if (APIImportExportConstants.FILE_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
+                    } else if (APIImportExportConstants.FILE_DOC_TYPE.
+                            equalsIgnoreCase(doc.getSourceType().toString())) {
                         inputStream = new FileInputStream(pathToArchive + doc.getFilePath());
                         String docExtension = FilenameUtils.getExtension(pathToArchive + doc.getFilePath());
                         Icon apiDocument = new Icon(inputStream, docExtension);
@@ -308,6 +348,7 @@ public final class APIImportUtil {
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
+     * @param currentUser   current logged in username
      * @throws APIImportException if getting the registry instance fails
      *
      */
@@ -358,6 +399,8 @@ public final class APIImportUtil {
      * @param customSequenceType type of the sequence
      * @param sequenceFileName name of the sequence
      * @param sequenceFileLocation location of the sequence file
+     * @throws APIImportException if getting the registry instance fails
+     *
      */
     private static void addSequenceToRegistry(Registry registry, String customSequenceType, String sequenceFileName,
                                               String sequenceFileLocation) throws APIImportException {
@@ -394,8 +437,10 @@ public final class APIImportUtil {
 
     /**
      * This method adds the WSDL to the registry, if there is a WSDL associated with the API
+     *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi the imported API object
+     * @param currentUser   current logged in username
      * @throws APIImportException if there is a URL error or registry error while storing the resource in registry
      */
     private static void addAPIWsdl(String pathToArchive, API importedApi, String currentUser)
@@ -429,6 +474,7 @@ public final class APIImportUtil {
 
     /**
      * This method adds Swagger API definition to registry
+     *
      * @param apiId Identifier of the imported API
      * @param archivePath File path where API archive stored
      * @throws APIImportException if there is an error occurs when adding Swagger definition
