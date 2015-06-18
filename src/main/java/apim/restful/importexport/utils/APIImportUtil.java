@@ -311,7 +311,7 @@ public final class APIImportUtil {
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
-     * @param currentUser   current logged in user
+     * @param currentUser   current logged in username
      * @throws APIImportException if getting the registry instance fails
      *
      */
@@ -403,7 +403,7 @@ public final class APIImportUtil {
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi the imported API object
-     * @param currentUser   current logged in user
+     * @param currentUser   current logged in username
      * @throws APIImportException if there is a URL error or registry error while storing the resource in registry
      */
     private static void addAPIWsdl(String pathToArchive, API importedApi, String currentUser)

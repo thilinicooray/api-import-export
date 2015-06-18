@@ -156,7 +156,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
      * the API.
      *
      * @param uploadedInputStream input stream from the REST request
-     * @return response indicating the status of the process
+     * @return response indicating the status of the API import process
      */
     @POST
     @Path("/import-api")
