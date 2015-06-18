@@ -1,6 +1,6 @@
 /*
  *
- *  Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,11 +27,6 @@ import java.io.File;
  */
 public final class APIImportExportConstants {
 
-    //This is where archive file get generated for exporting API
-    public static final String BASE_ARCHIVE_PATH = CarbonUtils.getCarbonHome() + File.separator + "tmp" +
-            File.separator + "work" ;
-    //name of the provider
-    public static final String PROVIDER_NAME = "admin";
     //length of the name of the temporary
     public static final int TEMP_FILENAME_LENGTH = 5;
     //name of the uploaded zip file
