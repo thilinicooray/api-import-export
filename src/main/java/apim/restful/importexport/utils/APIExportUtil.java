@@ -70,479 +70,471 @@ import java.util.Map;
  */
 public class APIExportUtil {
 
-	private static final Log log = LogFactory.getLog(APIExportUtil.class);
-	private static String archiveBasePath = null;
+    private static final Log log = LogFactory.getLog(APIExportUtil.class);
+    private static String archiveBasePath = null;
 
-	private APIExportUtil() {
-	}
+    private APIExportUtil() {
+    }
 
-	/**
-	 * Set base path where exporting archive should be generated
-	 *
-	 * @param path Temporary directory location
-	 */
-	public static void setArchiveBasePath(String path) {
-		archiveBasePath = path;
-	}
+    /**
+     * Set base path where exporting archive should be generated
+     *
+     * @param path Temporary directory location
+     */
+    public static void setArchiveBasePath(String path) {
+        archiveBasePath = path;
+    }
 
-	/**
-	 * Retrieve API provider
-	 *
-	 * @param userName User name
-	 * @return APIProvider Provider of the supplied user name
-	 * @throws APIExportException If an error occurs while retrieving the provider
-	 */
-	public static APIProvider getProvider(String userName) throws APIExportException {
-		APIProvider provider;
-		try {
-			provider = APIManagerFactory.getInstance().getAPIProvider(userName);
+    /**
+     * Retrieve API provider
+     *
+     * @param userName User name
+     * @return APIProvider Provider of the supplied user name
+     * @throws APIExportException If an error occurs while retrieving the provider
+     */
+    public static APIProvider getProvider(String userName) throws APIExportException {
+        APIProvider provider;
+        try {
+            provider = APIManagerFactory.getInstance().getAPIProvider(userName);
 
-			if (log.isDebugEnabled()) {
-				log.debug("Current provider retrieved successfully");
-			}
+            if (log.isDebugEnabled()) {
+                log.debug("Current provider retrieved successfully");
+            }
 
-			return provider;
+            return provider;
 
-		} catch (APIManagementException e) {
-			log.error("Error while retrieving provider" + e.getMessage());
-			throw new APIExportException("Error while retrieving current provider", e);
-		}
+        } catch (APIManagementException e) {
+            log.error("Error while retrieving provider" + e.getMessage());
+            throw new APIExportException("Error while retrieving current provider", e);
+        }
 
-	}
+    }
 
-	/**
-	 * Retrieve registry for the current tenant
-	 *
-	 * @param userName user name of the tenant
-	 * @return Registry registry of the current tenant
-	 * @throws APIExportException If an error occurs while retrieving registry
-	 */
-	public static Registry getRegistry(String userName) throws APIExportException {
-		boolean isTenantFlowStarted = false;
-		String tenantDomain = MultitenantUtils.getTenantDomain(userName);
-		try {
-			if (tenantDomain != null &&
-			    !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-				isTenantFlowStarted = true;
-				PrivilegedCarbonContext.startTenantFlow();
-				PrivilegedCarbonContext.getThreadLocalCarbonContext()
-				                       .setTenantDomain(tenantDomain, true);
-			}
-			Registry registry = CarbonContext.getThreadLocalCarbonContext().
-					getRegistry(RegistryType.SYSTEM_GOVERNANCE);
+    /**
+     * Retrieve registry for the current tenant
+     *
+     * @param userName user name of the tenant
+     * @return Registry registry of the current tenant
+     * @throws APIExportException If an error occurs while retrieving registry
+     */
+    public static Registry getRegistry(String userName) throws APIExportException {
+        boolean isTenantFlowStarted = false;
+        String tenantDomain = MultitenantUtils.getTenantDomain(userName);
+        try {
+            if (tenantDomain != null &&
+                    !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                isTenantFlowStarted = true;
+                PrivilegedCarbonContext.startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
+            }
+            Registry registry = CarbonContext.getThreadLocalCarbonContext().
+                    getRegistry(RegistryType.SYSTEM_GOVERNANCE);
 
-			if (log.isDebugEnabled()) {
-				log.debug("Registry of logged in user retrieved successfully");
-			}
-			return registry;
+            if (log.isDebugEnabled()) {
+                log.debug("Registry of logged in user retrieved successfully");
+            }
+            return registry;
 
-		} finally {
-			if (isTenantFlowStarted) {
-				PrivilegedCarbonContext.endTenantFlow();
-			}
-		}
-	}
+        } finally {
+            if (isTenantFlowStarted) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
+        }
+    }
 
-	/**
-	 * This method retrieves all meta information and registry resources required for an API to
-	 * recreate
-	 *
-	 * @param apiID    Identifier of the exporting API
-	 * @param userName User name of the requester
-	 * @return HttpResponse indicating whether resource retrieval got succeed or not
-	 * @throws APIExportException If an error occurs while retrieving API related resources
-	 */
-	public static Response retrieveApiToExport(APIIdentifier apiID, String userName)
-			throws APIExportException {
+    /**
+     * This method retrieves all meta information and registry resources required for an API to
+     * recreate
+     *
+     * @param apiID    Identifier of the exporting API
+     * @param userName User name of the requester
+     * @return HttpResponse indicating whether resource retrieval got succeed or not
+     * @throws APIExportException If an error occurs while retrieving API related resources
+     */
+    public static Response retrieveApiToExport(APIIdentifier apiID, String userName)
+            throws APIExportException {
 
-		API apiToReturn;
-		String archivePath = archiveBasePath.concat("/" + apiID.getApiName() + "-" +
-		                                            apiID.getVersion());
-		//initializing provider
-		APIProvider provider = getProvider(userName);
-		//registry for the current user
-		Registry registry = APIExportUtil.getRegistry(userName);
+        API apiToReturn;
+        String archivePath = archiveBasePath.concat("/" + apiID.getApiName() + "-" +
+                apiID.getVersion());
+        //initializing provider
+        APIProvider provider = getProvider(userName);
+        //registry for the current user
+        Registry registry = APIExportUtil.getRegistry(userName);
 
-		int tenantId = APIUtil.getTenantId(userName);
+        int tenantId = APIUtil.getTenantId(userName);
 
-		//directory creation
-		APIExportUtil.createDirectory(archivePath);
+        //directory creation
+        APIExportUtil.createDirectory(archivePath);
 
-		try {
-			apiToReturn = provider.getAPI(apiID);
-		} catch (APIManagementException e) {
-			log.error("Unable to retrieve API", e);
-			return Response.status(Response.Status.NOT_FOUND).entity("Unable to retrieve API")
-			               .type(MediaType.APPLICATION_JSON).
-							build();
-		}
+        try {
+            apiToReturn = provider.getAPI(apiID);
+        } catch (APIManagementException e) {
+            log.error("Unable to retrieve API", e);
+            return Response.status(Response.Status.NOT_FOUND).entity("Unable to retrieve API")
+                    .type(MediaType.APPLICATION_JSON).
+                            build();
+        }
 
-		//retrieving thumbnail
-		exportAPIThumbnail(apiID, registry);
+        //retrieving thumbnail
+        exportAPIThumbnail(apiID, registry);
 
-		//retrieving documents
-		List<Documentation> docList;
-		try {
-			docList = provider.getAllDocumentation(apiID);
-		} catch (APIManagementException e) {
-			log.error("Unable to retrieve API Documentation", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
-							build();
-		}
+        //retrieving documents
+        List<Documentation> docList;
+        try {
+            docList = provider.getAllDocumentation(apiID);
+        } catch (APIManagementException e) {
+            log.error("Unable to retrieve API Documentation", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).build();
+        }
 
-		if (!docList.isEmpty()) {
-			exportAPIDocumentation(docList, apiID, registry);
-		}
+        if (!docList.isEmpty()) {
+            exportAPIDocumentation(docList, apiID, registry);
+        }
 
-		String wsdlUrl = apiToReturn.getWsdlUrl();
+        String wsdlUrl = apiToReturn.getWsdlUrl();
 
-		if (wsdlUrl != null) {
-			exportWSDL(apiID, registry);
-		}
+        if (wsdlUrl != null) {
+            exportWSDL(apiID, registry);
+        }
 
-		//retrieving sequences
+        //retrieving sequences
 
-		exportSequences(apiToReturn, apiID, tenantId);
+        exportSequences(apiToReturn, apiID, tenantId);
 
-		//set API status to created
-		apiToReturn.setStatus(APIStatus.CREATED);
+        //set API status to created
+        apiToReturn.setStatus(APIStatus.CREATED);
 
         exportMetaInformation(apiToReturn, registry);
 
-		return Response.ok().build();
+        return Response.ok().build();
 
-	}
+    }
 
     /**
-	 * Retrieve thumbnail image for the exporting API and store it in the archive directory
-	 *
-	 * @param apiIdentifier ID of the requesting API
-	 * @param registry      Current tenant registry
-	 * @throws APIExportException If an error occurs while retrieving image from the registry or
-	 *                            storing in the archive directory
-	 */
-	public static void exportAPIThumbnail(APIIdentifier apiIdentifier, Registry registry)
-			throws APIExportException {
-		String thumbnailUrl = APIConstants.API_IMAGE_LOCATION + RegistryConstants.PATH_SEPARATOR +
-		                      apiIdentifier.getProviderName() + RegistryConstants.PATH_SEPARATOR +
-		                      apiIdentifier.getApiName() + RegistryConstants.PATH_SEPARATOR +
-		                      apiIdentifier.getVersion() + RegistryConstants.PATH_SEPARATOR +
-		                      APIConstants.API_ICON_IMAGE;
+     * Retrieve thumbnail image for the exporting API and store it in the archive directory
+     *
+     * @param apiIdentifier ID of the requesting API
+     * @param registry      Current tenant registry
+     * @throws APIExportException If an error occurs while retrieving image from the registry or
+     *                            storing in the archive directory
+     */
+    public static void exportAPIThumbnail(APIIdentifier apiIdentifier, Registry registry)
+            throws APIExportException {
+        String thumbnailUrl = APIConstants.API_IMAGE_LOCATION + RegistryConstants.PATH_SEPARATOR +
+                apiIdentifier.getProviderName() + RegistryConstants.PATH_SEPARATOR +
+                apiIdentifier.getApiName() + RegistryConstants.PATH_SEPARATOR +
+                apiIdentifier.getVersion() + RegistryConstants.PATH_SEPARATOR +
+                APIConstants.API_ICON_IMAGE;
 
-		InputStream imageDataStream = null;
-		OutputStream outputStream = null;
-		String archivePath = archiveBasePath
-				.concat("/" + apiIdentifier.getApiName() + "-" + apiIdentifier.getVersion());
-		try {
-			if (registry.resourceExists(thumbnailUrl)) {
-				Resource icon = registry.get(thumbnailUrl);
+        InputStream imageDataStream = null;
+        OutputStream outputStream = null;
+        String archivePath =
+                archiveBasePath.concat("/" + apiIdentifier.getApiName() +
+                        "-" + apiIdentifier.getVersion());
+        try {
+            if (registry.resourceExists(thumbnailUrl)) {
+                Resource icon = registry.get(thumbnailUrl);
 
-				imageDataStream = icon.getContentStream();
+                imageDataStream = icon.getContentStream();
 
-				String mediaType = icon.getMediaType();
-				String extension = getThumbnailFileType(mediaType);
+                String mediaType = icon.getMediaType();
+                String extension = getThumbnailFileType(mediaType);
 
-				if (extension != null) {
-					createDirectory(archivePath + "/Image");
+                if (extension != null) {
+                    createDirectory(archivePath + "/Image");
 
-					outputStream = new FileOutputStream(archivePath + "/Image/icon." + extension);
+                    outputStream = new FileOutputStream(archivePath + "/Image/icon." + extension);
 
-					IOUtils.copy(imageDataStream, outputStream);
+                    IOUtils.copy(imageDataStream, outputStream);
 
-					if (log.isDebugEnabled()) {
-						log.debug("Thumbnail image retrieved successfully");
-					}
-				}
-			}
-		} catch (IOException e) {
-			log.error("I/O error while writing API Thumbnail to file" + e.getMessage());
-			throw new APIExportException(
-					"I/O error while writing API Thumbnail to file :" + archivePath +
-					"/Image/icon.jpg", e);
-		} catch (RegistryException e) {
-			log.error("Error while retrieving Thumbnail " + e.getMessage());
-			throw new APIExportException("Error while retrieving Thumbnail", e);
-		} finally {
-			IOUtils.closeQuietly(imageDataStream);
-			IOUtils.closeQuietly(outputStream);
-		}
-	}
+                    if (log.isDebugEnabled()) {
+                        log.debug("Thumbnail image retrieved successfully");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("I/O error while writing API Thumbnail to file" + e.getMessage());
+            throw new APIExportException("I/O error while writing API Thumbnail to file :" +
+                    archivePath + "/Image/icon.jpg", e);
+        } catch (RegistryException e) {
+            log.error("Error while retrieving Thumbnail " + e.getMessage());
+            throw new APIExportException("Error while retrieving Thumbnail", e);
+        } finally {
+            IOUtils.closeQuietly(imageDataStream);
+            IOUtils.closeQuietly(outputStream);
+        }
+    }
 
-	/**
-	 * Retrieve content type of the thumbnail image for setting the exporting file extension
-	 *
-	 * @param mediaType Media type of the thumbnail registry resource
-	 * @return File extension for the exporting image
-	 */
-	private static String getThumbnailFileType(String mediaType) {
-		if (("image/png").equals(mediaType)) {
-			return "png";
-		} else if (("image/jpg").equals(mediaType)) {
-			return "jpg";
-		} else if ("image/jpeg".equals(mediaType)) {
-			return "jpeg";
-		} else if (("image/bmp").equals(mediaType)) {
-			return "bmp";
-		} else if (("image/gif").equals(mediaType)) {
-			return "gif";
-		} else {
-			log.error("Unsupported media type");
-		}
+    /**
+     * Retrieve content type of the thumbnail image for setting the exporting file extension
+     *
+     * @param mediaType Media type of the thumbnail registry resource
+     * @return File extension for the exporting image
+     */
+    private static String getThumbnailFileType(String mediaType) {
+        if (("image/png").equals(mediaType)) {
+            return "png";
+        } else if (("image/jpg").equals(mediaType)) {
+            return "jpg";
+        } else if ("image/jpeg".equals(mediaType)) {
+            return "jpeg";
+        } else if (("image/bmp").equals(mediaType)) {
+            return "bmp";
+        } else if (("image/gif").equals(mediaType)) {
+            return "gif";
+        } else {
+            log.error("Unsupported media type");
+        }
 
-		return null;
-	}
+        return null;
+    }
 
-	/**
-	 * Retrieve documentation for the exporting API and store it in the archive directory
-	 * FILE, INLINE and URL documentations are handled
-	 *
-	 * @param apiIdentifier ID of the requesting API
-	 * @param registry      Current tenant registry
-	 * @param docList       documentation list of the exporting API
-	 * @throws APIExportException If an error occurs while retrieving documents from the
-	 *                            registry or storing in the archive directory
-	 */
-	public static void exportAPIDocumentation(List<Documentation> docList,
-	                                          APIIdentifier apiIdentifier, Registry registry)
-			throws APIExportException {
-		Gson gson = new GsonBuilder().setPrettyPrinting().create();
-		String archivePath = archiveBasePath
-				.concat("/" + apiIdentifier.getApiName() + "-" + apiIdentifier.getVersion());
-		createDirectory(archivePath + "/Docs");
-		InputStream fileInputStream = null;
-		OutputStream outputStream = null;
-		try {
-			for (Documentation doc : docList) {
-				String sourceType = doc.getSourceType().name();
-				if (Documentation.DocumentSourceType.FILE.toString().equalsIgnoreCase(sourceType)) {
-					String fileName =
-							doc.getFilePath().substring(doc.getFilePath().lastIndexOf("/") + 1);
-					String filePath = APIUtil.getDocumentationFilePath(apiIdentifier, fileName);
+    /**
+     * Retrieve documentation for the exporting API and store it in the archive directory
+     * FILE, INLINE and URL documentations are handled
+     *
+     * @param apiIdentifier ID of the requesting API
+     * @param registry      Current tenant registry
+     * @param docList       documentation list of the exporting API
+     * @throws APIExportException If an error occurs while retrieving documents from the
+     *                            registry or storing in the archive directory
+     */
+    public static void exportAPIDocumentation(List<Documentation> docList,
+            APIIdentifier apiIdentifier, Registry registry) throws APIExportException {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        String archivePath =
+                archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
+                        apiIdentifier.getVersion());
+        createDirectory(archivePath + "/Docs");
+        InputStream fileInputStream = null;
+        OutputStream outputStream = null;
+        try {
+            for (Documentation doc : docList) {
+                String sourceType = doc.getSourceType().name();
+                if (Documentation.DocumentSourceType.FILE.toString()
+                        .equalsIgnoreCase(sourceType)) {
+                    String fileName =
+                            doc.getFilePath().substring(doc.getFilePath().lastIndexOf("/") + 1);
+                    String filePath = APIUtil.getDocumentationFilePath(apiIdentifier, fileName);
 
-					//check whether resource exists in the registry
-					Resource docFile = registry.get(filePath);
-					String localFilePath = "/Docs/" + fileName;
-					outputStream = new FileOutputStream(archivePath + localFilePath);
-					fileInputStream = docFile.getContentStream();
+                    //check whether resource exists in the registry
+                    Resource docFile = registry.get(filePath);
+                    String localFilePath = "/Docs/" + fileName;
+                    outputStream = new FileOutputStream(archivePath + localFilePath);
+                    fileInputStream = docFile.getContentStream();
 
-					IOUtils.copy(fileInputStream, outputStream);
+                    IOUtils.copy(fileInputStream, outputStream);
 
-					doc.setFilePath(localFilePath);
+                    doc.setFilePath(localFilePath);
 
-					if (log.isDebugEnabled()) {
-						log.debug(fileName + " retrieved successfully");
-					}
-				}
-			}
+                    if (log.isDebugEnabled()) {
+                        log.debug(fileName + " retrieved successfully");
+                    }
+                }
+            }
 
-			String json = gson.toJson(docList);
+            String json = gson.toJson(docList);
             writeFile(archivePath + "/Docs/docs.json", json);
 
-			if (log.isDebugEnabled()) {
-				log.debug("API Documentation retrieved successfully");
-			}
+            if (log.isDebugEnabled()) {
+                log.debug("API Documentation retrieved successfully");
+            }
 
-		} catch (IOException e) {
-			log.error("I/O error while writing API documentation to file" + e.getMessage());
-			throw new APIExportException("I/O error while writing API documentation to file", e);
-		} catch (RegistryException e) {
-			log.error("Error while retrieving documentation " + e.getMessage());
-			throw new APIExportException("Error while retrieving documentation", e);
-		} finally {
-			IOUtils.closeQuietly(fileInputStream);
-			IOUtils.closeQuietly(outputStream);
-		}
-	}
+        } catch (IOException e) {
+            log.error("I/O error while writing API documentation to file" + e.getMessage());
+            throw new APIExportException("I/O error while writing API documentation to file", e);
+        } catch (RegistryException e) {
+            log.error("Error while retrieving documentation " + e.getMessage());
+            throw new APIExportException("Error while retrieving documentation", e);
+        } finally {
+            IOUtils.closeQuietly(fileInputStream);
+            IOUtils.closeQuietly(outputStream);
+        }
+    }
 
-	/**
-	 * Retrieve WSDL for the exporting API and store it in the archive directory
-	 *
-	 * @param apiIdentifier ID of the requesting API
-	 * @param registry      Current tenant registry
-	 * @throws APIExportException If an error occurs while retrieving WSDL from the registry or
-	 *                            storing in the archive directory
-	 */
-	public static void exportWSDL(APIIdentifier apiIdentifier, Registry registry)
-			throws APIExportException {
+    /**
+     * Retrieve WSDL for the exporting API and store it in the archive directory
+     *
+     * @param apiIdentifier ID of the requesting API
+     * @param registry      Current tenant registry
+     * @throws APIExportException If an error occurs while retrieving WSDL from the registry or
+     *                            storing in the archive directory
+     */
+    public static void exportWSDL(APIIdentifier apiIdentifier, Registry registry)
+            throws APIExportException {
 
-		InputStream wsdlStream = null;
-		OutputStream outputStream = null;
-		String archivePath = archiveBasePath
-				.concat("/" + apiIdentifier.getApiName() + "-" + apiIdentifier.getVersion());
+        InputStream wsdlStream = null;
+        OutputStream outputStream = null;
+        String archivePath =
+                archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
+                        apiIdentifier.getVersion());
 
-		try {
-			String wsdlPath =
-					APIConstants.API_WSDL_RESOURCE_LOCATION + apiIdentifier.getProviderName() +
-					"--" + apiIdentifier.getApiName() + apiIdentifier.getVersion() + ".wsdl";
-			if (registry.resourceExists(wsdlPath)) {
-				createDirectory(archivePath + "/WSDL");
+        try {
+            String wsdlPath = APIConstants.API_WSDL_RESOURCE_LOCATION +
+                    apiIdentifier.getProviderName() + "--" + apiIdentifier.getApiName() +
+                    apiIdentifier.getVersion() + ".wsdl";
+            if (registry.resourceExists(wsdlPath)) {
+                createDirectory(archivePath + "/WSDL");
 
-				Resource wsdl = registry.get(wsdlPath);
+                Resource wsdl = registry.get(wsdlPath);
 
-				wsdlStream = wsdl.getContentStream();
+                wsdlStream = wsdl.getContentStream();
 
-				outputStream = new FileOutputStream(
-						archivePath + "/WSDL/" + apiIdentifier.getApiName() + "-" +
-						apiIdentifier.getVersion() + ".wsdl");
+                outputStream = new FileOutputStream(archivePath + "/WSDL/" +
+                        apiIdentifier.getApiName() + "-" + apiIdentifier.getVersion() + ".wsdl");
 
-				IOUtils.copy(wsdlStream, outputStream);
+                IOUtils.copy(wsdlStream, outputStream);
 
-				if (log.isDebugEnabled()) {
-					log.debug("WSDL file retrieved successfully");
-				}
-			}
-		} catch (IOException e) {
-			log.error("I/O error while writing WSDL to file" + e.getMessage());
-			throw new APIExportException("I/O error while writing WSDL to file", e);
-		} catch (RegistryException e) {
-			log.error("Error while retrieving WSDL " + e.getMessage());
-			throw new APIExportException("Error while retrieving WSDL", e);
-		} finally {
-			IOUtils.closeQuietly(wsdlStream);
-			IOUtils.closeQuietly(outputStream);
-		}
-	}
+                if (log.isDebugEnabled()) {
+                    log.debug("WSDL file retrieved successfully");
+                }
+            }
+        } catch (IOException e) {
+            log.error("I/O error while writing WSDL to file" + e.getMessage());
+            throw new APIExportException("I/O error while writing WSDL to file", e);
+        } catch (RegistryException e) {
+            log.error("Error while retrieving WSDL " + e.getMessage());
+            throw new APIExportException("Error while retrieving WSDL", e);
+        } finally {
+            IOUtils.closeQuietly(wsdlStream);
+            IOUtils.closeQuietly(outputStream);
+        }
+    }
 
-	/**
-	 * Retrieve available custom sequences for the exporting API
-	 *
-	 * @param api           exporting API
-	 * @param apiIdentifier ID of the requesting API
-	 * @throws APIExportException If an error occurs while retrieving sequences from registry
-	 */
-	public static void exportSequences(API api, APIIdentifier apiIdentifier, int tenantId)
-			throws APIExportException {
+    /**
+     * Retrieve available custom sequences for the exporting API
+     *
+     * @param api           exporting API
+     * @param apiIdentifier ID of the requesting API
+     * @throws APIExportException If an error occurs while retrieving sequences from registry
+     */
+    public static void exportSequences(API api, APIIdentifier apiIdentifier, int tenantId)
+            throws APIExportException {
 
-		Map<String, String> sequences = new HashMap<String, String>();
+        Map<String, String> sequences = new HashMap<String, String>();
 
-		if (api.getInSequence() != null) {
-			sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN, api.getInSequence());
-		}
+        if (api.getInSequence() != null) {
+            sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN, api.getInSequence());
+        }
 
-		if (api.getOutSequence() != null) {
-			sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT, api.getOutSequence());
-		}
+        if (api.getOutSequence() != null) {
+            sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT, api.getOutSequence());
+        }
 
-		if (api.getOutSequence() != null) {
-			sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT, api.getFaultSequence());
-		}
+        if (api.getOutSequence() != null) {
+            sequences.put(APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT, api.getFaultSequence());
+        }
 
-		if (!sequences.isEmpty()) {
-			String archivePath = archiveBasePath
-					.concat("/" + apiIdentifier.getApiName() + "-" + apiIdentifier.getVersion());
-			createDirectory(archivePath + "/Sequences");
+        if (!sequences.isEmpty()) {
+            String archivePath =
+                    archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
+                            apiIdentifier.getVersion());
+            createDirectory(archivePath + "/Sequences");
 
-			try {
-				String sequenceName;
-				String direction;
-				OMElement sequenceConfig;
-				for (Map.Entry<String, String> sequence : sequences.entrySet()) {
-					sequenceName = sequence.getValue();
-					direction = sequence.getKey();
-					if (sequenceName != null) {
-						if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN
-								.equalsIgnoreCase(direction)) {
-							sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
+            try {
+                String sequenceName;
+                String direction;
+                OMElement sequenceConfig;
+                for (Map.Entry<String, String> sequence : sequences.entrySet()) {
+                    sequenceName = sequence.getValue();
+                    direction = sequence.getKey();
+                    if (sequenceName != null) {
+                        if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN.equalsIgnoreCase(direction)) {
+                            sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
                                     APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN);
-							writeSequenceToFile(sequenceConfig, sequenceName,
-                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
-							                    apiIdentifier);
-						} else if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT
-								.equalsIgnoreCase(direction)) {
-							sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
+                            writeSequenceToFile(sequenceConfig, sequenceName,
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN, apiIdentifier);
+                        } else if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT.equalsIgnoreCase(direction)) {
+                            sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
                                     APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT);
-							writeSequenceToFile(sequenceConfig, sequenceName,
-                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
-							                    apiIdentifier);
-						} else {
-							sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
+                            writeSequenceToFile(sequenceConfig, sequenceName, APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
+                                    apiIdentifier);
+                        } else {
+                            sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
                                     APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT);
-							writeSequenceToFile(sequenceConfig, sequenceName,
-                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
-							                    apiIdentifier);
-						}
-					}
-				}
-			} catch (APIManagementException e) {
-				log.error("Error while retrieving custom sequence" + e.getMessage());
-				throw new APIExportException("Error while retrieving custom sequence", e);
+                            writeSequenceToFile(sequenceConfig, sequenceName,
+                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT, apiIdentifier);
+                        }
+                    }
+                }
+            } catch (APIManagementException e) {
+                log.error("Error while retrieving custom sequence" + e.getMessage());
+                throw new APIExportException("Error while retrieving custom sequence", e);
 
-			}
-		}
-	}
+            }
+        }
+    }
 
-	/**
-	 * Store custom sequences in the archive directory
-	 *
-	 * @param sequenceConfig Sequence configuration
-	 * @param sequenceName   Sequence name
-	 * @param direction      Direction of the sequence "in", "out" or "fault"
-	 * @param apiIdentifier  ID of the requesting API
-	 * @throws APIExportException If an error occurs while serializing XML stream or storing in
-	 *                            archive directory
-	 */
-	public static void writeSequenceToFile(OMElement sequenceConfig, String sequenceName,
-	                                       String direction, APIIdentifier apiIdentifier)
-			throws APIExportException {
-		OutputStream outputStream = null;
-		String archivePath = archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
-		                                            apiIdentifier.getVersion()) + "/Sequences/";
+    /**
+     * Store custom sequences in the archive directory
+     *
+     * @param sequenceConfig Sequence configuration
+     * @param sequenceName   Sequence name
+     * @param direction      Direction of the sequence "in", "out" or "fault"
+     * @param apiIdentifier  ID of the requesting API
+     * @throws APIExportException If an error occurs while serializing XML stream or storing in
+     *                            archive directory
+     */
+    public static void writeSequenceToFile(OMElement sequenceConfig, String sequenceName, String direction,
+            APIIdentifier apiIdentifier) throws APIExportException {
+        OutputStream outputStream = null;
+        String archivePath = archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
+                apiIdentifier.getVersion()) + "/Sequences/";
 
-		String pathToExportedSequence = archivePath + direction + "-sequence/";
+        String pathToExportedSequence = archivePath + direction + "-sequence/";
 
-		String exportedSequenceFile = pathToExportedSequence + sequenceName + ".xml";
-		try {
-			createDirectory(pathToExportedSequence);
-			outputStream = new FileOutputStream(exportedSequenceFile);
-			sequenceConfig.serialize(outputStream);
+        String exportedSequenceFile = pathToExportedSequence + sequenceName + ".xml";
+        try {
+            createDirectory(pathToExportedSequence);
+            outputStream = new FileOutputStream(exportedSequenceFile);
+            sequenceConfig.serialize(outputStream);
 
-			if (log.isDebugEnabled()) {
-				log.debug(sequenceName + " retrieved successfully");
-			}
+            if (log.isDebugEnabled()) {
+                log.debug(sequenceName + " retrieved successfully");
+            }
 
-		} catch (FileNotFoundException e) {
-			log.error("Unable to find file" + e.getMessage());
-			throw new APIExportException("Unable to find file: " + exportedSequenceFile, e);
-		} catch (XMLStreamException e) {
-			log.error("Error while processing XML stream" + e.getMessage());
-			throw new APIExportException("Error while processing XML stream", e);
-		} finally {
-			IOUtils.closeQuietly(outputStream);
-		}
-	}
+        } catch (FileNotFoundException e) {
+            log.error("Unable to find file" + e.getMessage());
+            throw new APIExportException("Unable to find file: " + exportedSequenceFile, e);
+        } catch (XMLStreamException e) {
+            log.error("Error while processing XML stream" + e.getMessage());
+            throw new APIExportException("Error while processing XML stream", e);
+        } finally {
+            IOUtils.closeQuietly(outputStream);
+        }
+    }
 
-	/**
-	 * Create directory at the given path
-	 *
-	 * @param path Path of the directory
-	 * @throws APIExportException If directory creation failed
-	 */
-	public static void createDirectory(String path) throws APIExportException {
-		if (path != null) {
-			File file = new File(path);
-			if (!file.exists() && !file.mkdirs()) {
-				log.error("Error while creating directory : " + path);
-				throw new APIExportException("Directory creation failed " + path);
-			}
-		}
-	}
+    /**
+     * Create directory at the given path
+     *
+     * @param path Path of the directory
+     * @throws APIExportException If directory creation failed
+     */
+    public static void createDirectory(String path) throws APIExportException {
+        if (path != null) {
+            File file = new File(path);
+            if (!file.exists() && !file.mkdirs()) {
+                log.error("Error while creating directory : " + path);
+                throw new APIExportException("Directory creation failed " + path);
+            }
+        }
+    }
 
     /**
      * Retrieve meta information of the API to export
      * URL template information are stored in swagger.json definition while rest of the required
      * data are in api.json
      *
-     * @param apiToReturn  API to be exported
-     * @param registry Current tenant registry
+     * @param apiToReturn API to be exported
+     * @param registry    Current tenant registry
      * @throws APIExportException If an error occurs while exporting meta information
      */
-    private static void exportMetaInformation(API apiToReturn, Registry registry)
-            throws APIExportException {
+    private static void exportMetaInformation(API apiToReturn, Registry registry) throws APIExportException {
         APIDefinition definitionFromSwagger20 = new APIDefinitionFromSwagger20();
-        String archivePath = archiveBasePath
-                .concat("/" + apiToReturn.getId().getApiName() + "-" +
-                        apiToReturn.getId().getVersion());
+        String archivePath = archiveBasePath.concat("/" + apiToReturn.getId().getApiName() + "-" +
+                apiToReturn.getId().getVersion());
 
         createDirectory(archivePath + "/Meta-information");
 
@@ -553,8 +545,7 @@ public class APIExportUtil {
         writeFile(archivePath + "/Meta-information/" + "api.json", apiInJson);
 
         try {
-            String swaggerDefinition =
-                    definitionFromSwagger20.getAPIDefinition(apiToReturn.getId(), registry);
+            String swaggerDefinition = definitionFromSwagger20.getAPIDefinition(apiToReturn.getId(), registry);
             writeFile(archivePath + "/Meta-information/" + "swagger.json", swaggerDefinition);
         } catch (APIManagementException e) {
             log.error("Error while retrieving Swagger definition" + e.getMessage());
@@ -565,7 +556,7 @@ public class APIExportUtil {
     /**
      * Write content to file
      *
-     * @param path Location of the file
+     * @param path    Location of the file
      * @param content Content to be written
      * @throws APIExportException If an error occurs while writing to file
      */
@@ -578,7 +569,7 @@ public class APIExportUtil {
         } catch (IOException e) {
             log.error("I/O error while writing to file" + e.getMessage());
             throw new APIExportException("I/O error while writing to file", e);
-        }  finally {
+        } finally {
             IOUtils.closeQuietly(writer);
         }
 

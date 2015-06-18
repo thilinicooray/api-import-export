@@ -111,7 +111,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 			}
 
 			apiIdentifier =
-					new APIIdentifier(APIUtil.replaceEmailDomainBack(providerName), name, version);
+					new APIIdentifier(APIUtil.replaceEmailDomain(providerName), name, version);
 
 			//create temp location for storing API data to generate archive
             String currentDirectory = System.getProperty("java.io.tmpdir");
