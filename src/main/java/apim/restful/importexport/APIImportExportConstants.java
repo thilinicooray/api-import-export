@@ -1,6 +1,6 @@
 /*
  *
- *  Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,17 +27,14 @@ import java.io.File;
  */
 public final class APIImportExportConstants {
 
-    //This is where archive file get generated for exporting API
-    public static final String BASE_ARCHIVE_PATH = CarbonUtils.getCarbonHome() + File.separator + "tmp" +
-            File.separator + "work" ;
-    //name of the provider
-    public static final String PROVIDER_NAME = "admin";
     //length of the name of the temporary
     public static final int TEMP_FILENAME_LENGTH = 5;
     //name of the uploaded zip file
     public static final String UPLOAD_FILE_NAME = "APIArchive.zip";
     //location of the api JSON file
     public static final String JSON_FILE_LOCATION = "/Meta-information/api.json";
+    //location of the api swagger definition file
+    public static final String SWAGGER_DEFINITION_LOCATION = "/Meta-information/swagger.json";
     //location of the image
     public static final String IMAGE_FILE_LOCATION = "/Image/";
     //name of the image
@@ -62,11 +59,5 @@ public final class APIImportExportConstants {
     public static final String WSDL_LOCATION = "/WSDL/";
     //extension of wsdl files
     public static final String WSDL_EXTENSION = ".wsdl";
-    //sequence direction : in
-    public static final String SEQUENCE_DIRECTION_IN = "in";
-    //sequence direction : out
-    public static final String SEQUENCE_DIRECTION_OUT = "out";
-    //sequence direction : fault
-    public static final String SEQUENCE_DIRECTION_FAULT = "fault";
 
 }
