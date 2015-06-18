@@ -18,16 +18,12 @@
 
 package apim.restful.importexport;
 
-import org.wso2.carbon.utils.CarbonUtils;
-
-import java.io.File;
-
 /**
  * This class contains all the constants required for API Import and Export
  */
 public final class APIImportExportConstants {
 
-    //length of the name of the temporary
+    //length of the name of the temporary directory
     public static final int TEMP_FILENAME_LENGTH = 5;
     //name of the uploaded zip file
     public static final String UPLOAD_FILE_NAME = "APIArchive.zip";
