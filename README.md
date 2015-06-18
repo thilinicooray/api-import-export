@@ -10,6 +10,7 @@ Zipped archive consists of the following structure
     <APIName>-<version>
     |_ Meta Information
        |_ api.json
+       |_ swagger.json
     |_ Documents
        |_ docs.json
     |_ Image
