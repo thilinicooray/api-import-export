@@ -79,8 +79,8 @@ public final class APIImportUtil {
      *
      * @throws org.wso2.carbon.apimgt.api.APIManagementException if the provider cannot be initialized
      */
-    public static void initializeProvider() throws APIManagementException {
-        provider = APIManagerFactory.getInstance().getAPIProvider(APIImportExportConstants.PROVIDER_NAME);
+    public static void initializeProvider(String currentUserName) throws APIExportException {
+        provider = APIExportUtil.getProvider(currentUserName);
     }
 
     /**
@@ -171,7 +171,8 @@ public final class APIImportUtil {
      * @throws APIImportException     if the tiers are not supported or if api.json is not found
      * @throws APIManagementException if the resource addition to API fails
      */
-    public static void importAPI(String pathToArchive) throws APIManagementException, APIImportException {
+    public static void importAPI(String pathToArchive, String currentUser)
+            throws APIManagementException, APIImportException {
 
         Gson gson = new Gson();
         InputStream inputStream = null;
@@ -201,8 +202,8 @@ public final class APIImportUtil {
             provider.addAPI(importedApi);
             addAPIImage(pathToArchive, importedApi);
             addAPIDocuments(pathToArchive, importedApi, gson);
-            addAPISequences(pathToArchive, importedApi);
-            addAPIWsdl(pathToArchive, importedApi);
+            addAPISequences(pathToArchive, importedApi, currentUser);
+            addAPIWsdl(pathToArchive, importedApi, currentUser);
             addSwaggerDefinition(importedApi.getId(), pathToArchive);
 
         } catch (FileNotFoundException e) {
@@ -311,10 +312,11 @@ public final class APIImportUtil {
      * @throws APIImportException if getting the registry instance fails
      *
      */
-    private static void addAPISequences(String pathToArchive, API importedApi) throws APIImportException {
+    private static void addAPISequences(String pathToArchive, API importedApi, String currentUser)
+            throws APIImportException {
 
         try {
-            Registry registry = APIExportUtil.getRegistry(APIImportExportConstants.PROVIDER_NAME);
+            Registry registry = APIExportUtil.getRegistry(currentUser);
             String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
             String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
                     + inSequenceFileName;
@@ -397,7 +399,8 @@ public final class APIImportUtil {
      * @param importedApi the imported API object
      * @throws APIImportException if there is a URL error or registry error while storing the resource in registry
      */
-    private static void addAPIWsdl(String pathToArchive, API importedApi) throws APIImportException {
+    private static void addAPIWsdl(String pathToArchive, API importedApi, String currentUser)
+            throws APIImportException {
 
         String wsdlFileName = importedApi.getId().getApiName() + "-" + importedApi.getId().getVersion() +
                 APIImportExportConstants.WSDL_EXTENSION;
@@ -407,7 +410,7 @@ public final class APIImportUtil {
             try {
                 URL wsdlFileUrl = new File(wsdlPath).toURI().toURL();
                 importedApi.setWsdlUrl(wsdlFileUrl.toString());
-                Registry registry = APIExportUtil.getRegistry(APIImportExportConstants.PROVIDER_NAME);
+                Registry registry = APIExportUtil.getRegistry(currentUser);
                 APIUtil.createWSDL((org.wso2.carbon.registry.core.Registry) registry, importedApi);
             } catch (MalformedURLException e) {
                 log.error("Error in getting WSDL URL. ", e);
