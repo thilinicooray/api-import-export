@@ -172,7 +172,8 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
                 return authorizationResponse;
             } else {
                 try {
-                    APIImportUtil.initializeProvider();
+                    String currentUser = AuthenticatorUtil.getAuthenticatedUserName();
+                    APIImportUtil.initializeProvider(currentUser);
                     String currentDirectory = System.getProperty("java.io.tmpdir");
                     String createdFolders = "/" + RandomStringUtils.
                             randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
@@ -183,20 +184,19 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
                         String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
                         String absolutePath = currentDirectory + createdFolders;
                         APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
-                        String extractedFolderName = APIImportUtil.extractArchive(new File(absolutePath + uploadFileName),
-                                absolutePath);
-                        APIImportUtil.importAPI(absolutePath + extractedFolderName);
+                        String extractedFolderName = APIImportUtil.extractArchive(
+                                new File(absolutePath + uploadFileName), absolutePath);
+                        APIImportUtil.importAPI(absolutePath + extractedFolderName , currentUser);
                         importFolder.deleteOnExit();
                         return Response.status(Status.CREATED).build();
                     } else {
                         return Response.status(Status.BAD_REQUEST).build();
                     }
-                }
-                catch (APIManagementException e) {
-                    String errorDetail = new Gson().toJson(e.getMessage());
-                    return Response.serverError().entity(errorDetail).build();
                 } catch (APIImportException e) {
                     String errorDetail = new Gson().toJson(e.getErrorDescription());
+                    return Response.serverError().entity(errorDetail).build();
+                } catch (APIManagementException e) {
+                    String errorDetail = new Gson().toJson(e.getMessage());
                     return Response.serverError().entity(errorDetail).build();
                 }
             }
@@ -205,3 +205,4 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
         }
     }
 }
+
