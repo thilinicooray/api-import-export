@@ -172,19 +172,22 @@ public final class APIImportUtil {
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param currentUser the current logged in user
-     * @throws APIImportException     if the tiers are not supported or if api.json is not found
-     * @throws APIManagementException if the resource addition to API fails
+     * @param isDefaultProviderAllowed decision to keep or replace the provider
+     * @throws APIManagementException  if the resource addition to API fails
+     * @throws APIImportException if the tiers are not supported or if api.json file is not found
      */
-    public static void importAPI(String pathToArchive, String currentUser)
+    public static void importAPI(String pathToArchive, String currentUser, boolean isDefaultProviderAllowed)
             throws APIManagementException, APIImportException {
 
-        Gson gson = new Gson();
-        InputStream inputStream = null;
+            API importedApi;
 
-        try {
-            inputStream = new FileInputStream(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION);
-            API importedApi = setApiProviderToCurrentUser(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION,
-                    currentUser);
+            if(isDefaultProviderAllowed){
+                importedApi = setApiProviderToOriginalProvider(pathToArchive);
+            } else {
+                importedApi= setApiProviderToCurrentUser(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION,
+                        currentUser);
+            }
+
             Set<Tier> allowedTiers = provider.getTiers();
             boolean isAllTiersAvailable = allowedTiers.containsAll(importedApi.getAvailableTiers());
 
@@ -204,18 +207,41 @@ public final class APIImportUtil {
 
             provider.addAPI(importedApi);
             addAPIImage(pathToArchive, importedApi);
-            addAPIDocuments(pathToArchive, importedApi, gson);
+            addAPIDocuments(pathToArchive, importedApi);
             addAPISequences(pathToArchive, importedApi, currentUser);
             addAPIWsdl(pathToArchive, importedApi, currentUser);
             addSwaggerDefinition(importedApi.getId(), pathToArchive);
 
+    }
+
+    /**
+     *This method will create the API with the unmodified provider
+     *
+     * @param pathToArchive location of the extracted folder of the API
+     * @return API object with unmodified provider
+     * @throws APIImportException if the api.json file cannot be located
+     */
+    private static API setApiProviderToOriginalProvider(String pathToArchive) throws APIImportException {
+
+        FileInputStream inputStream = null;
+        BufferedReader bufferedReader = null;
+        API providerUnModifiedAPI = null;
+        try {
+            inputStream = new FileInputStream(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION);
+            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            providerUnModifiedAPI = new Gson().fromJson(bufferedReader, API.class);
         } catch (FileNotFoundException e) {
-            log.error("Failed to locate file : " + APIImportExportConstants.JSON_FILE_LOCATION, e);
-            throw new APIImportException("Failed to locate API JSON file. " + e.getMessage());
+            log.error("Error in locating api.json file. ", e);
+            throw new APIImportException("Error in locating api.json file. " + e.getMessage());
         } finally {
             closeQuietly(inputStream);
+            closeQuietly(bufferedReader);
         }
+        return providerUnModifiedAPI;
     }
+
+
+
 
     /**
      * This method sets the provider of the imported API as the current user
@@ -236,8 +262,7 @@ public final class APIImportUtil {
             //locate the "providerName" within the "id" and set it as the current user
             JsonObject apiId = configObject.getAsJsonObject("id");
             apiId.addProperty("providerName", APIUtil.replaceEmailDomain(userName));
-            Gson gson = new Gson();
-            providerModifiedAPI = gson.fromJson(configElement, API.class);
+            providerModifiedAPI = new Gson().fromJson(configElement, API.class);
             return providerModifiedAPI;
         } catch (IOException e) {
             log.error("Error in setting API provider to logged in user. ", e);
@@ -288,10 +313,9 @@ public final class APIImportUtil {
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
-     * @param gson          object related to the API data
      * @throws org.wso2.carbon.apimgt.api.APIManagementException if the document addition fails
      */
-    private static void addAPIDocuments(String pathToArchive, API importedApi, Gson gson)
+    private static void addAPIDocuments(String pathToArchive, API importedApi)
             throws APIManagementException {
 
         String docFileLocation = pathToArchive + APIImportExportConstants.DOCUMENT_FILE_LOCATION;
@@ -301,7 +325,7 @@ public final class APIImportUtil {
             if (checkFileExistence(docFileLocation)) {
                 FileInputStream inputStream = new FileInputStream(docFileLocation);
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-                Documentation[] documentations = gson.fromJson(bufferedReader, Documentation[].class);
+                Documentation[] documentations = new Gson().fromJson(bufferedReader, Documentation[].class);
 
                 //For each type of document, separate actions are preformed
                 for (Documentation doc : documentations) {
