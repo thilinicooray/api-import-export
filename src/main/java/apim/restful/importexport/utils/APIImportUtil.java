@@ -180,14 +180,11 @@ public final class APIImportUtil {
 
         Gson gson = new Gson();
         InputStream inputStream = null;
-        BufferedReader bufferedReader = null;
 
         try {
             inputStream = new FileInputStream(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION);
-            API importedApi = setApiProviderToCurrentUser(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION, currentUser);
-            //bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-
-            //API importedApi = gson.fromJson(bufferedReader, API.class);
+            API importedApi = setApiProviderToCurrentUser(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION,
+                    currentUser);
             Set<Tier> allowedTiers = provider.getTiers();
             boolean isAllTiersAvailable = allowedTiers.containsAll(importedApi.getAvailableTiers());
 
@@ -205,9 +202,6 @@ public final class APIImportUtil {
                 importedApi.removeAvailableTiers(unsupportedTiersList);
             }
 
-            //APIIdentifier x= importedApi.getId();
-            //x.set
-//importedApi.set
             provider.addAPI(importedApi);
             addAPIImage(pathToArchive, importedApi);
             addAPIDocuments(pathToArchive, importedApi, gson);
@@ -220,37 +214,35 @@ public final class APIImportUtil {
             throw new APIImportException("Failed to locate API JSON file. " + e.getMessage());
         } finally {
             closeQuietly(inputStream);
-            closeQuietly(bufferedReader);
         }
     }
 
-    private static API setApiProviderToCurrentUser(String path, String userName) {
+    /**
+     * This method sets the provider of the imported API as the current user
+     *
+     * @param pathToJSONFile the location to the JSON file representing the API
+     * @param userName username of the current user
+     * @return API object with the modified provider
+     * @throws APIImportException if the JSON file cannot be read properly
+     */
+    private static API setApiProviderToCurrentUser(String pathToJSONFile, String userName) throws APIImportException {
+
+        API providerModifiedAPI;
         try {
-            String jsonContent = FileUtils.readFileToString(new File (path));
+            String jsonContent = FileUtils.readFileToString(new File(pathToJSONFile));
             JsonElement configElement = new JsonParser().parse(jsonContent);
             JsonObject configObject = configElement.getAsJsonObject();
+
+            //locate the "providerName" within the "id" and set it as the current user
             JsonObject apiId = configObject.getAsJsonObject("id");
             apiId.addProperty("providerName", APIUtil.replaceEmailDomain(userName));
             Gson gson = new Gson();
-            API importedAPI = gson.fromJson(configElement, API.class);
-            return importedAPI;
-
-
-            /*JsonObject sandboxEndpoint = configObject.getAsJsonObject("sandbox_endpoints");
-
-            if (sandboxEndpoint != null) {
-                endpointConfig.put("sandbox", sandboxEndpoint.getAsJsonPrimitive("url").toString()
-                        .replaceAll("\"", ""));
-            }
-
-            JsonPrimitive endpointType = configObject..getAsJsonPrimitive("endpoint_type");
-            endpointConfig.put("type", endpointType.toString().replaceAll("\"", ""));*/
-
+            providerModifiedAPI = gson.fromJson(configElement, API.class);
+            return providerModifiedAPI;
         } catch (IOException e) {
-            e.printStackTrace();
-
+            log.error("Error in setting API provider to logged in user. ", e);
+            throw new APIImportException("Error in setting API provider to logged in user. " + e.getMessage());
         }
-        return null;
     }
 
     /**
