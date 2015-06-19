@@ -103,9 +103,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 				log.error("Not authorized to " +
 				          "export API :" + name + "-" + version + "-" + providerName);
 				return Response.status(Response.Status.FORBIDDEN).entity("Not authorized to " +
-				                                                         "export API :" + name +
-				                                                         "-" + version + "-" +
-				                                                         providerName)
+                        "export API :" + name + "-" + version + "-" + providerName)
 				               .type(MediaType.APPLICATION_JSON).
 								build();
 			}

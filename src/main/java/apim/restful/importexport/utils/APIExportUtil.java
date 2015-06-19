@@ -1,6 +1,6 @@
 /*
  *
- *  Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -121,8 +121,7 @@ public class APIExportUtil {
         boolean isTenantFlowStarted = false;
         String tenantDomain = MultitenantUtils.getTenantDomain(userName);
         try {
-            if (tenantDomain != null &&
-                    !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+            if (tenantDomain != null && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
                 isTenantFlowStarted = true;
                 PrivilegedCarbonContext.startTenantFlow();
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
@@ -151,8 +150,7 @@ public class APIExportUtil {
      * @return HttpResponse indicating whether resource retrieval got succeed or not
      * @throws APIExportException If an error occurs while retrieving API related resources
      */
-    public static Response retrieveApiToExport(APIIdentifier apiID, String userName)
-            throws APIExportException {
+    public static Response retrieveApiToExport(APIIdentifier apiID, String userName) throws APIExportException {
 
         API apiToReturn;
         String archivePath = archiveBasePath.concat("/" + apiID.getApiName() + "-" +
@@ -185,8 +183,8 @@ public class APIExportUtil {
             docList = provider.getAllDocumentation(apiID);
         } catch (APIManagementException e) {
             log.error("Unable to retrieve API Documentation", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Internal Server Error")
+                    .type(MediaType.APPLICATION_JSON).build();
         }
 
         if (!docList.isEmpty()) {
@@ -220,8 +218,7 @@ public class APIExportUtil {
      * @throws APIExportException If an error occurs while retrieving image from the registry or
      *                            storing in the archive directory
      */
-    public static void exportAPIThumbnail(APIIdentifier apiIdentifier, Registry registry)
-            throws APIExportException {
+    public static void exportAPIThumbnail(APIIdentifier apiIdentifier, Registry registry) throws APIExportException {
         String thumbnailUrl = APIConstants.API_IMAGE_LOCATION + RegistryConstants.PATH_SEPARATOR +
                 apiIdentifier.getProviderName() + RegistryConstants.PATH_SEPARATOR +
                 apiIdentifier.getApiName() + RegistryConstants.PATH_SEPARATOR +
@@ -230,9 +227,8 @@ public class APIExportUtil {
 
         InputStream imageDataStream = null;
         OutputStream outputStream = null;
-        String archivePath =
-                archiveBasePath.concat("/" + apiIdentifier.getApiName() +
-                        "-" + apiIdentifier.getVersion());
+        String archivePath = archiveBasePath.concat("/" + apiIdentifier.getApiName() +
+                "-" + apiIdentifier.getVersion());
         try {
             if (registry.resourceExists(thumbnailUrl)) {
                 Resource icon = registry.get(thumbnailUrl);
@@ -301,22 +297,19 @@ public class APIExportUtil {
      * @throws APIExportException If an error occurs while retrieving documents from the
      *                            registry or storing in the archive directory
      */
-    public static void exportAPIDocumentation(List<Documentation> docList,
-            APIIdentifier apiIdentifier, Registry registry) throws APIExportException {
+    public static void exportAPIDocumentation(List<Documentation> docList, APIIdentifier apiIdentifier,
+            Registry registry) throws APIExportException {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        String archivePath =
-                archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
-                        apiIdentifier.getVersion());
+        String archivePath = archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
+                apiIdentifier.getVersion());
         createDirectory(archivePath + "/Docs");
         InputStream fileInputStream = null;
         OutputStream outputStream = null;
         try {
             for (Documentation doc : docList) {
                 String sourceType = doc.getSourceType().name();
-                if (Documentation.DocumentSourceType.FILE.toString()
-                        .equalsIgnoreCase(sourceType)) {
-                    String fileName =
-                            doc.getFilePath().substring(doc.getFilePath().lastIndexOf("/") + 1);
+                if (Documentation.DocumentSourceType.FILE.toString().equalsIgnoreCase(sourceType)) {
+                    String fileName = doc.getFilePath().substring(doc.getFilePath().lastIndexOf("/") + 1);
                     String filePath = APIUtil.getDocumentationFilePath(apiIdentifier, fileName);
 
                     //check whether resource exists in the registry
@@ -362,14 +355,12 @@ public class APIExportUtil {
      * @throws APIExportException If an error occurs while retrieving WSDL from the registry or
      *                            storing in the archive directory
      */
-    public static void exportWSDL(APIIdentifier apiIdentifier, Registry registry)
-            throws APIExportException {
+    public static void exportWSDL(APIIdentifier apiIdentifier, Registry registry) throws APIExportException {
 
         InputStream wsdlStream = null;
         OutputStream outputStream = null;
-        String archivePath =
-                archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
-                        apiIdentifier.getVersion());
+        String archivePath = archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
+                apiIdentifier.getVersion());
 
         try {
             String wsdlPath = APIConstants.API_WSDL_RESOURCE_LOCATION +
@@ -410,8 +401,7 @@ public class APIExportUtil {
      * @param apiIdentifier ID of the requesting API
      * @throws APIExportException If an error occurs while retrieving sequences from registry
      */
-    public static void exportSequences(API api, APIIdentifier apiIdentifier, int tenantId)
-            throws APIExportException {
+    public static void exportSequences(API api, APIIdentifier apiIdentifier, int tenantId) throws APIExportException {
 
         Map<String, String> sequences = new HashMap<String, String>();
 
@@ -428,9 +418,8 @@ public class APIExportUtil {
         }
 
         if (!sequences.isEmpty()) {
-            String archivePath =
-                    archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
-                            apiIdentifier.getVersion());
+            String archivePath = archiveBasePath.concat("/" + apiIdentifier.getApiName() + "-" +
+                    apiIdentifier.getVersion());
             createDirectory(archivePath + "/Sequences");
 
             try {
@@ -444,8 +433,8 @@ public class APIExportUtil {
                         if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN.equalsIgnoreCase(direction)) {
                             sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
                                     APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN);
-                            writeSequenceToFile(sequenceConfig, sequenceName,
-                                    APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN, apiIdentifier);
+                            writeSequenceToFile(sequenceConfig, sequenceName, APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
+                                    apiIdentifier);
                         } else if (APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT.equalsIgnoreCase(direction)) {
                             sequenceConfig = APIUtil.getCustomSequence(sequenceName, tenantId,
                                     APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT);

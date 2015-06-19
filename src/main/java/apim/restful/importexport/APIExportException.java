@@ -1,6 +1,6 @@
 /*
  *
- *  Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@
 
 package apim.restful.importexport;
 
-
+/**
+ * This class is used for handling exceptions occur in API export
+ */
 public class APIExportException extends Exception {
 
 	public APIExportException(String msg) {
