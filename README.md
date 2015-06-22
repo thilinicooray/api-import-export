@@ -66,10 +66,10 @@ Samples
 
 ### Sample cURL command for API import
 
-    curl -H "Authorization:Basic YWRtaW46YWRtaW4=" -F file=@"full/path/to/the/zip/file" -k -X POST "https://10.100.7.40:9443/api-import-export/import-api?preserve-provider=true"
-    The above command will keep the original provider of the API. If there is a need to change the provider as the current logged in user, please set the value of "preserve-provider" to "false".
+    curl -H "Authorization:Basic YWRtaW46YWRtaW4=" -F file=@"full/path/to/the/zip/file" -k -X POST "https://10.100.7.40:9443/api-import-export/import-api?preserveProvider=true"
+    The above command will keep the original provider of the API. If there is a need to change the provider as the current logged in user, please set the value of "preserveProvider" to "false".
 
     Important Note :
     When importing APIs across different tenants (Eg - API has been exported in super tenant and imported to another tenant domain),
-    value of the "preserve-provider" query parameter must always set to "false".
+    value of the "preserveProvider" query parameter must always set to "false".
 

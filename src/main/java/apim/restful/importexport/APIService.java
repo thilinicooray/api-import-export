@@ -162,7 +162,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
     @Path("/import-api")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream, @QueryParam("preserve-provider")
+    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream, @QueryParam("preserveProvider")
                                 String defaultProviderStatus, @Context HttpHeaders httpHeaders) {
 
         boolean isProviderPreserved;
