@@ -151,10 +151,10 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
     /**
      * This is the service which is used to import an API. All relevant API data will be included upon the creation of
-     * the API.
+     * the API. Depending on the choice of the user, provider of the imported API will be preserved or modified.
      *
      * @param uploadedInputStream uploadedInputStream input stream from the REST request
-     * @param defaultProvider     user choice to keep or replace the API provider
+     * @param defaultProviderStatus     user choice to keep or replace the API provider
      * @param httpHeaders         HTTP headers for the authentication mechanism
      * @return response for the API process
      */
@@ -162,14 +162,14 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
     @Path("/import-api")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream,
-                              @QueryParam("defaultProvider") String defaultProvider, @Context HttpHeaders httpHeaders) {
+    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream, @QueryParam("preserve-provider")
+                                String defaultProviderStatus, @Context HttpHeaders httpHeaders) {
 
-        boolean providerStatus;
-        if ("TRUE".equalsIgnoreCase(defaultProvider)) {
-            providerStatus = true;
-        } else if ("FALSE".equalsIgnoreCase(defaultProvider)) {
-            providerStatus = false;
+        boolean isProviderPreserved;
+        if (APIImportExportConstants.STATUS_TRUE.equalsIgnoreCase(defaultProviderStatus)) {
+            isProviderPreserved = true;
+        } else if (APIImportExportConstants.STATUS_FALSE.equalsIgnoreCase(defaultProviderStatus)) {
+            isProviderPreserved = false;
         } else {
             return Response.status(Status.NOT_ACCEPTABLE).entity("Invalid value for query parameter.\n").build();
         }
@@ -177,7 +177,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
         try {
             Response authorizationResponse = AuthenticatorUtil.authorizeUser(httpHeaders);
             if (Response.Status.OK.getStatusCode() == authorizationResponse.getStatus()) {
-                try {
+
                     String currentUser = AuthenticatorUtil.getAuthenticatedUserName();
                     APIImportUtil.initializeProvider(currentUser);
                     String currentDirectory = System.getProperty("java.io.tmpdir");
@@ -187,30 +187,31 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
                     boolean folderCreateStatus = importFolder.mkdirs();
 
                     if (folderCreateStatus) {
+
                         String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
                         String absolutePath = currentDirectory + createdFolders;
                         APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
                         String extractedFolderName = APIImportUtil.extractArchive(
                                 new File(absolutePath + uploadFileName), absolutePath);
-                        APIImportUtil.importAPI(absolutePath + extractedFolderName, currentUser, providerStatus);
+                        APIImportUtil.importAPI(absolutePath + extractedFolderName, currentUser, isProviderPreserved);
                         importFolder.deleteOnExit();
                         return Response.status(Status.CREATED).entity("API imported successfully.\n").build();
                     } else {
                         return Response.status(Status.BAD_REQUEST).build();
                     }
-                } catch (APIImportException e) {
-                    String errorDetail = new Gson().toJson(e.getErrorDescription());
-                    return Response.serverError().entity(errorDetail).build();
-                } catch (APIManagementException e) {
-                    String errorDetail = new Gson().toJson(e.getMessage());
-                    return Response.serverError().entity(errorDetail).build();
-                }
+
             } else {
+
                 return Response.status(Status.UNAUTHORIZED).entity("Not authorized to import API.\n").build();
             }
         } catch (APIExportException e) {
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error in initializing API provider.\n").build();
+        } catch (APIImportException e) {
+            String errorDetail = new Gson().toJson(e.getErrorDescription());
+            return Response.serverError().entity(errorDetail).build();
+        } catch (APIManagementException e) {
+            String errorDetail = new Gson().toJson(e.getMessage());
+            return Response.serverError().entity(errorDetail).build();
         }
     }
 }
-

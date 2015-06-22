@@ -182,7 +182,7 @@ public final class APIImportUtil {
             API importedApi;
 
             if(isDefaultProviderAllowed){
-                importedApi = setApiProviderToOriginalProvider(pathToArchive);
+                importedApi = preserveOriginalProvider(pathToArchive);
             } else {
                 importedApi= setApiProviderToCurrentUser(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION,
                         currentUser);
@@ -211,7 +211,6 @@ public final class APIImportUtil {
             addAPISequences(pathToArchive, importedApi, currentUser);
             addAPIWsdl(pathToArchive, importedApi, currentUser);
             addSwaggerDefinition(importedApi.getId(), pathToArchive);
-
     }
 
     /**
@@ -221,7 +220,7 @@ public final class APIImportUtil {
      * @return API object with unmodified provider
      * @throws APIImportException if the api.json file cannot be located
      */
-    private static API setApiProviderToOriginalProvider(String pathToArchive) throws APIImportException {
+    private static API preserveOriginalProvider(String pathToArchive) throws APIImportException {
 
         FileInputStream inputStream = null;
         BufferedReader bufferedReader = null;
@@ -239,9 +238,6 @@ public final class APIImportUtil {
         }
         return providerUnModifiedAPI;
     }
-
-
-
 
     /**
      * This method sets the provider of the imported API as the current user
@@ -523,6 +519,5 @@ public final class APIImportUtil {
         return testFile.exists();
     }
 }
-
 
 

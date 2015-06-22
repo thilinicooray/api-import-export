@@ -23,6 +23,10 @@ package apim.restful.importexport;
  */
 public final class APIImportExportConstants {
 
+    //string representing the true state when preserving the provider
+    public static final String STATUS_TRUE = "TRUE";
+    //string representing the false state when preserving the provider
+    public static final String STATUS_FALSE = "FALSE";
     //length of the name of the temporary directory
     public static final int TEMP_FILENAME_LENGTH = 5;
     //name of the uploaded zip file
