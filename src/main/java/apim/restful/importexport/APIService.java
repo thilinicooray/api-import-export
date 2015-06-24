@@ -32,8 +32,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import javax.ws.rs.core.Response.Status;
+
 import java.io.File;
 import java.io.InputStream;
 
@@ -158,6 +158,8 @@ public class APIService {
                                 String defaultProviderStatus, @Context HttpHeaders httpHeaders) {
 
         boolean isProviderPreserved;
+
+        //Check the value specified in the URL parameter to ensure it is correct
         if (APIImportExportConstants.STATUS_TRUE.equalsIgnoreCase(defaultProviderStatus)) {
             isProviderPreserved = true;
         } else if (APIImportExportConstants.STATUS_FALSE.equalsIgnoreCase(defaultProviderStatus)) {
@@ -168,32 +170,35 @@ public class APIService {
 
         try {
             Response authorizationResponse = AuthenticatorUtil.authorizeUser(httpHeaders);
+
+            //Process continues only if the user is authorized
             if (Response.Status.OK.getStatusCode() == authorizationResponse.getStatus()) {
 
-                    String currentUser = AuthenticatorUtil.getAuthenticatedUserName();
-                    APIImportUtil.initializeProvider(currentUser);
-                    String currentDirectory = System.getProperty(APIImportExportConstants.TEMP_DIR);
-                    String createdFolders = "/" + RandomStringUtils.
-                            randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
-                    File importFolder = new File(currentDirectory + createdFolders);
-                    boolean folderCreateStatus = importFolder.mkdirs();
+                String currentUser = AuthenticatorUtil.getAuthenticatedUserName();
+                APIImportUtil.initializeProvider(currentUser);
 
-                    if (folderCreateStatus) {
+                //Temporary directory is used to create the required folders
+                String currentDirectory = System.getProperty(APIImportExportConstants.TEMP_DIR);
+                String createdFolders = "/" + RandomStringUtils.
+                        randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
+                File importFolder = new File(currentDirectory + createdFolders);
+                boolean folderCreateStatus = importFolder.mkdirs();
 
-                        String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
-                        String absolutePath = currentDirectory + createdFolders;
-                        APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
-                        String extractedFolderName = APIImportUtil.extractArchive(
-                                new File(absolutePath + uploadFileName), absolutePath);
-                        APIImportUtil.importAPI(absolutePath + extractedFolderName, currentUser, isProviderPreserved);
-                        importFolder.deleteOnExit();
-                        return Response.status(Status.CREATED).entity("API imported successfully.\n").build();
-                    } else {
-                        return Response.status(Status.BAD_REQUEST).build();
-                    }
+                //API import process starts only if the required folder is created successfully
+                if (folderCreateStatus) {
 
+                    String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
+                    String absolutePath = currentDirectory + createdFolders;
+                    APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
+                    String extractedFolderName = APIImportUtil.extractArchive(
+                            new File(absolutePath + uploadFileName), absolutePath);
+                    APIImportUtil.importAPI(absolutePath + extractedFolderName, currentUser, isProviderPreserved);
+                    importFolder.deleteOnExit();
+                    return Response.status(Status.CREATED).entity("API imported successfully.\n").build();
+                } else {
+                    return Response.status(Status.BAD_REQUEST).build();
+                }
             } else {
-
                 return Response.status(Status.UNAUTHORIZED).entity("Not authorized to import API.\n").build();
             }
         } catch (APIExportException e) {

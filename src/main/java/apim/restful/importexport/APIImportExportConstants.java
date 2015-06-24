@@ -35,6 +35,10 @@ public final class APIImportExportConstants {
     public static final String UPLOAD_FILE_NAME = "APIArchive.zip";
     //location of the api JSON file
     public static final String JSON_FILE_LOCATION = "/Meta-information/api.json";
+    //name of the id element tag of the api.json file
+    public static final String ID_ELEMENT = "id";
+    //name of the id element tag of the api.json file
+    public static final String PROVIDER_ELEMENT = "providerName";
     //location of the api swagger definition file
     public static final String SWAGGER_DEFINITION_LOCATION = "/Meta-information/swagger.json";
     //location of the image
