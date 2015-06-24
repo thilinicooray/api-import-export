@@ -115,12 +115,12 @@ public class APIService {
 
             APIExportUtil.setArchiveBasePath(archiveBasePath);
 
-            Response ApiResourceRetrievalResponse = APIExportUtil.retrieveApiToExport(apiIdentifier, userName);
+            Response apiResourceRetrievalResponse = APIExportUtil.retrieveApiToExport(apiIdentifier, userName);
 
             //Retrieve resources : thumbnail, meta information, wsdl, sequences and documents
             // available for the exporting API
-            if (!(Response.Status.OK.getStatusCode() == ApiResourceRetrievalResponse.getStatus())) {
-                return ApiResourceRetrievalResponse;
+            if (!(Response.Status.OK.getStatusCode() == apiResourceRetrievalResponse.getStatus())) {
+                return apiResourceRetrievalResponse;
             }
 
             ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
