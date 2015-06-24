@@ -29,6 +29,8 @@ public final class APIImportExportConstants {
     public static final String STATUS_FALSE = "FALSE";
     //length of the name of the temporary directory
     public static final int TEMP_FILENAME_LENGTH = 5;
+    //system property for default temporary directory
+    public static final String TEMP_DIR = "java.io.tmpdir";
     //name of the uploaded zip file
     public static final String UPLOAD_FILE_NAME = "APIArchive.zip";
     //location of the api JSON file

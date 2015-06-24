@@ -53,99 +53,91 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
  * This class provides JAX-RS services for exporting and importing APIs.
  * These services provides functionality for exporting and importing single API at a time.
  */
-@Path("/") public class APIService {
+@Path("/")
+public class APIService {
 
-	private static final Log log = LogFactory.getLog(APIService.class);
+    private static final Log log = LogFactory.getLog(APIService.class);
 
-	/**
-	 * This service exports an API from API Manager for a given API ID
-	 * Meta information, API icon, documentation, WSDL and sequences are exported
-	 * This service generates a zipped archive which contains all the above mentioned resources
-	 * for a given API
-	 *
-	 * @param name         Name of the API that needs to be exported
-	 * @param version      Version of the API that needs to be exported
-	 * @param providerName Provider name of the API that needs to be exported
-	 * @return Zipped API as the response to the service call
-	 */
-	@GET
-    @Path("/export-api")
+    /**
+     * This service exports an API from API Manager for a given API ID
+     * Meta information, API icon, documentation, WSDL and sequences are exported
+     * This service generates a zipped archive which contains all the above mentioned resources
+     * for a given API
+     *
+     * @param name         Name of the API that needs to be exported
+     * @param version      Version of the API that needs to be exported
+     * @param providerName Provider name of the API that needs to be exported
+     * @return Zipped API as the response to the service call
+     */
+    @GET @Path("/export-api")
     @Produces("application/zip")
     public Response exportAPI(@QueryParam("name") String name, @QueryParam("version") String version,
-			@QueryParam("provider") String providerName, @Context HttpHeaders httpHeaders) {
+            @QueryParam("provider") String providerName, @Context HttpHeaders httpHeaders) {
 
-		String userName;
-		if (name == null || version == null || providerName == null) {
-			log.error("Invalid API Information ");
+        String userName;
+        if (name == null || version == null || providerName == null) {
+            log.error("Invalid API Information ");
 
-			return Response.status(Response.Status.BAD_REQUEST).entity("Invalid API " +
-			                                                           "Information" +
-			                                                           " ")
-			               .type(MediaType.APPLICATION_JSON).
-							build();
-		}
-		log.info("Retrieving API for API-Id : " + name + "-" + version + "-" + providerName);
-		APIIdentifier apiIdentifier;
-		try {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Invalid API Information")
+                    .type(MediaType.APPLICATION_JSON).build();
+        }
+        log.info("Retrieving API for API-Id : " + name + "-" + version + "-" + providerName);
+        APIIdentifier apiIdentifier;
+        try {
 
-			Response authorizationResponse = AuthenticatorUtil.authorizeUser(httpHeaders);
-			if (!(Response.Status.OK.getStatusCode() == authorizationResponse.getStatus())) {
-				return authorizationResponse;
-			}
+            Response authorizationResponse = AuthenticatorUtil.authorizeUser(httpHeaders);
+            if (!(Response.Status.OK.getStatusCode() == authorizationResponse.getStatus())) {
+                return authorizationResponse;
+            }
 
-			userName = AuthenticatorUtil.getAuthenticatedUserName();
-			//provider names with @ signs are only accepted
-			String apiDomain = MultitenantUtils.getTenantDomain(providerName);
-			String apiRequesterDomain = MultitenantUtils.getTenantDomain(userName);
-			//Allows to export APIs created only in current tenant domain
-			if (!apiDomain.equals(apiRequesterDomain)) {
-				//not authorized to export requested API
-				log.error("Not authorized to " +
-				          "export API :" + name + "-" + version + "-" + providerName);
-				return Response.status(Response.Status.FORBIDDEN).entity("Not authorized to " +
-                        "export API :" + name + "-" + version + "-" + providerName)
-				               .type(MediaType.APPLICATION_JSON).
-								build();
-			}
+            userName = AuthenticatorUtil.getAuthenticatedUserName();
+            //provider names with @ signs are only accepted
+            String apiDomain = MultitenantUtils.getTenantDomain(providerName);
+            String apiRequesterDomain = MultitenantUtils.getTenantDomain(userName);
+            //Allows to export APIs created only in current tenant domain
+            if (!apiDomain.equals(apiRequesterDomain)) {
+                //not authorized to export requested API
+                log.error("Not authorized to " +
+                        "export API :" + name + "-" + version + "-" + providerName);
+                return Response.status(Response.Status.FORBIDDEN).entity("Not authorized to export API :" +
+                        name + "-" + version + "-" + providerName).type(MediaType.APPLICATION_JSON).build();
+            }
 
-			apiIdentifier =
-					new APIIdentifier(APIUtil.replaceEmailDomain(providerName), name, version);
+            apiIdentifier = new APIIdentifier(APIUtil.replaceEmailDomain(providerName), name, version);
 
-			//create temp location for storing API data to generate archive
-            String currentDirectory = System.getProperty("java.io.tmpdir");
+            //create temp location for storing API data to generate archive
+            String currentDirectory = System.getProperty(APIImportExportConstants.TEMP_DIR);
             String createdFolders = "/" + RandomStringUtils.
-                    randomAlphanumeric(5) + "/";
+                    randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
             File importFolder = new File(currentDirectory + createdFolders);
             APIExportUtil.createDirectory(importFolder.getPath());
-			String archiveBasePath = importFolder.toString();
+            String archiveBasePath = importFolder.toString();
 
-			APIExportUtil.setArchiveBasePath(archiveBasePath);
+            APIExportUtil.setArchiveBasePath(archiveBasePath);
 
-			Response ApiResourceRetrievalResponse =
-					APIExportUtil.retrieveApiToExport(apiIdentifier, userName);
+            Response ApiResourceRetrievalResponse = APIExportUtil.retrieveApiToExport(apiIdentifier, userName);
 
-			//Retrieve resources : thumbnail, meta information, wsdl, sequences and documents
-			// available for the exporting API
-			if (!(Response.Status.OK.getStatusCode() == ApiResourceRetrievalResponse.getStatus())) {
-				return ApiResourceRetrievalResponse;
-			}
+            //Retrieve resources : thumbnail, meta information, wsdl, sequences and documents
+            // available for the exporting API
+            if (!(Response.Status.OK.getStatusCode() == ApiResourceRetrievalResponse.getStatus())) {
+                return ApiResourceRetrievalResponse;
+            }
 
             ArchiveGeneratorUtil.archiveDirectory(archiveBasePath);
 
-			log.info("API" + name + "-" + version + " exported successfully");
+            log.info("API" + name + "-" + version + " exported successfully");
 
-			File file = new File(archiveBasePath + ".zip");
-			Response.ResponseBuilder response = Response.ok(file);
-			response.header("Content-Disposition", "attachment; filename=\"" + file.getName() +
-			                                       "\"");
-			return response.build();
+            File file = new File(archiveBasePath + ".zip");
+            Response.ResponseBuilder response = Response.ok(file);
+            response.header("Content-Disposition", "attachment; filename=\"" + file.getName() +
+                    "\"");
+            return response.build();
 
-		} catch (APIExportException e) {
-			log.error("APIExportException occurred while exporting ", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-			               .entity("Internal Server Error").type(MediaType.APPLICATION_JSON).
-							build();
-		}
+        } catch (APIExportException e) {
+            log.error("APIExportException occurred while exporting ", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Internal Server Error")
+                    .type(MediaType.APPLICATION_JSON).build();
+        }
 
     }
 
@@ -180,7 +172,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
                     String currentUser = AuthenticatorUtil.getAuthenticatedUserName();
                     APIImportUtil.initializeProvider(currentUser);
-                    String currentDirectory = System.getProperty("java.io.tmpdir");
+                    String currentDirectory = System.getProperty(APIImportExportConstants.TEMP_DIR);
                     String createdFolders = "/" + RandomStringUtils.
                             randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
                     File importFolder = new File(currentDirectory + createdFolders);

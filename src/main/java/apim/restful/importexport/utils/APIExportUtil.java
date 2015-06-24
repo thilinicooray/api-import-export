@@ -174,10 +174,10 @@ public class APIExportUtil {
                             build();
         }
 
-        //retrieving thumbnail
+        //export thumbnail
         exportAPIThumbnail(apiID, registry);
 
-        //retrieving documents
+        //export documents
         List<Documentation> docList;
         try {
             docList = provider.getAllDocumentation(apiID);
@@ -191,19 +191,19 @@ public class APIExportUtil {
             exportAPIDocumentation(docList, apiID, registry);
         }
 
+        //export wsdl
         String wsdlUrl = apiToReturn.getWsdlUrl();
-
         if (wsdlUrl != null) {
             exportWSDL(apiID, registry);
         }
 
-        //retrieving sequences
-
+        //export sequences
         exportSequences(apiToReturn, apiID, tenantId);
 
         //set API status to created
         apiToReturn.setStatus(APIStatus.CREATED);
 
+        //export meta information
         exportMetaInformation(apiToReturn, registry);
 
         return Response.ok().build();
@@ -528,14 +528,17 @@ public class APIExportUtil {
         createDirectory(archivePath + "/Meta-information");
 
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        // convert java object to JSON format,
-        // and return as JSON formatted string
         String apiInJson = gson.toJson(apiToReturn);
         writeFile(archivePath + "/Meta-information/" + "api.json", apiInJson);
 
         try {
             String swaggerDefinition = definitionFromSwagger20.getAPIDefinition(apiToReturn.getId(), registry);
             writeFile(archivePath + "/Meta-information/" + "swagger.json", swaggerDefinition);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Meta information retrieved successfully");
+            }
+
         } catch (APIManagementException e) {
             log.error("Error while retrieving Swagger definition" + e.getMessage());
             throw new APIExportException("Error while retrieving Swagger definition", e);
