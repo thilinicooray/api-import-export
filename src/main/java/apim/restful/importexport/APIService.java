@@ -20,7 +20,6 @@ package apim.restful.importexport;
 
 
 import com.google.gson.Gson;
-import com.sun.jersey.multipart.FormDataParam;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -29,6 +28,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
+
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -44,6 +44,8 @@ import apim.restful.importexport.utils.AuthenticatorUtil;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.cxf.jaxrs.ext.multipart.Multipart;
+
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.model.APIIdentifier;
 import org.wso2.carbon.apimgt.impl.utils.APIUtil;
@@ -154,8 +156,8 @@ public class APIService {
     @Path("/import-api")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response importAPI(@FormDataParam("file") InputStream uploadedInputStream, @QueryParam("preserveProvider")
-                                String defaultProviderStatus, @Context HttpHeaders httpHeaders) {
+    public Response importAPI(@Multipart("file") InputStream uploadedInputStream, @QueryParam("preserveProvider")
+                        String defaultProviderStatus, @Context HttpHeaders httpHeaders) {
 
         boolean isProviderPreserved;
 

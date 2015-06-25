@@ -34,6 +34,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.FaultGatewaysException;
@@ -67,7 +68,6 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import static org.apache.commons.io.IOUtils.closeQuietly;
 
 /**
  * This class provides the functions utilized to import an API from an API archive.
@@ -98,6 +98,7 @@ public final class APIImportUtil {
     public static void transferFile(InputStream uploadedInputStream, String newFileName, String storageLocation)
             throws APIImportException {
         FileOutputStream outFileStream = null;
+
         try {
             outFileStream = new FileOutputStream(new File(storageLocation, newFileName));
             int read = 0;
@@ -109,7 +110,7 @@ public final class APIImportUtil {
             log.error("Error in transferring files.", e);
             throw new APIImportException("Error in transferring archive files. " + e.getMessage());
         } finally {
-            closeQuietly(outFileStream);
+            IOUtils.closeQuietly(outFileStream);
         }
     }
 
@@ -167,9 +168,9 @@ public final class APIImportUtil {
             log.error("Failed to extract archive file ", e);
             throw new APIImportException("Failed to extract archive file. " + e.getMessage());
         } finally {
-            closeQuietly(zip);
-            closeQuietly(inputStream);
-            closeQuietly(outputStream);
+            IOUtils.closeQuietly(zip);
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(outputStream);
         }
     }
 
@@ -240,8 +241,8 @@ public final class APIImportUtil {
             log.error("Error in locating api.json file. ", e);
             throw new APIImportException("Error in locating api.json file. " + e.getMessage());
         } finally {
-            closeQuietly(inputStream);
-            closeQuietly(bufferedReader);
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(bufferedReader);
         }
         return providerUnModifiedAPI;
     }
@@ -305,6 +306,7 @@ public final class APIImportUtil {
                                 importedApi.getId().getProviderName()));
                         APIUtil.setResourcePermissions(importedApi.getId().getProviderName(), null, null, thumbPath);
                         provider.updateAPI(importedApi);
+                        break;
                     }
                 }
             }
@@ -342,9 +344,11 @@ public final class APIImportUtil {
                     if (APIImportExportConstants.INLINE_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         provider.addDocumentation(apiIdentifier, doc);
                         provider.addDocumentationContent(importedApi, doc.getName(), doc.getSummary());
+                        continue;
 
                     } else if (APIImportExportConstants.URL_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         provider.addDocumentation(apiIdentifier, doc);
+                        continue;
 
                     } else if (APIImportExportConstants.FILE_DOC_TYPE.
                             equalsIgnoreCase(doc.getSourceType().toString())) {
@@ -363,6 +367,7 @@ public final class APIImportUtil {
                                 importedApi.getVisibility(), visibleRoles, filePathDoc);
                         doc.setFilePath(provider.addIcon(filePathDoc, apiDocument));
                         provider.addDocumentation(apiIdentifier, doc);
+                        continue;
                     }
                 }
             }
@@ -458,7 +463,7 @@ public final class APIImportUtil {
             log.error("I/O error while writing sequence data to the registry. ", e);
             throw new APIImportException("I/O error while writing sequence data to the registry. " + e.getMessage());
         } finally {
-            closeQuietly(inSeqStream);
+            IOUtils.closeQuietly(inSeqStream);
         }
     }
 
