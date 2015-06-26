@@ -18,10 +18,16 @@
 
 package apim.restful.importexport;
 
+import java.io.File;
+
 /**
  * This class contains all the constants required for API Import and Export
  */
 public final class APIImportExportConstants {
+
+
+    static String directorySeparator = File.pathSeparator;
+
 
     //string representing the true state when preserving the provider
     public static final String STATUS_TRUE = "TRUE";
@@ -34,19 +40,19 @@ public final class APIImportExportConstants {
     //name of the uploaded zip file
     public static final String UPLOAD_FILE_NAME = "APIArchive.zip";
     //location of the api JSON file
-    public static final String JSON_FILE_LOCATION = "/Meta-information/api.json";
+    public static final String JSON_FILE_LOCATION = directorySeparator+"Meta-information"+directorySeparator+"api.json";
     //name of the id element tag of the api.json file
     public static final String ID_ELEMENT = "id";
     //name of the id element tag of the api.json file
     public static final String PROVIDER_ELEMENT = "providerName";
     //location of the api swagger definition file
-    public static final String SWAGGER_DEFINITION_LOCATION = "/Meta-information/swagger.json";
+    public static final String SWAGGER_DEFINITION_LOCATION = directorySeparator+"Meta-information"+directorySeparator+"swagger.json";
     //location of the image
-    public static final String IMAGE_FILE_LOCATION = "/Image/";
+    public static final String IMAGE_FILE_LOCATION = directorySeparator+"Image"+directorySeparator;
     //name of the image
     public static final String IMAGE_FILE_NAME = "icon";
     //location of the documents JSON file
-    public static final String DOCUMENT_FILE_LOCATION = "/Docs/docs.json";
+    public static final String DOCUMENT_FILE_LOCATION = directorySeparator+"Docs"+directorySeparator+"docs.json";
     //name of the inline file type
     public static final String INLINE_DOC_TYPE = "INLINE";
     //name of the url file type
@@ -54,15 +60,15 @@ public final class APIImportExportConstants {
     //name of the physical file type
     public static final String FILE_DOC_TYPE = "FILE";
     //location of the in sequence
-    public static final String IN_SEQUENCE_LOCATION = "/Sequences/in-sequence/";
+    public static final String IN_SEQUENCE_LOCATION = directorySeparator+"Sequences"+directorySeparator+"in-sequence"+directorySeparator;
     //location of the out sequence
-    public static final String OUT_SEQUENCE_LOCATION = "/Sequences/out-sequence/";
+    public static final String OUT_SEQUENCE_LOCATION = directorySeparator+"Sequences"+directorySeparator+"out-sequence"+directorySeparator;
     //location of the fault sequence
-    public static final String FAULT_SEQUENCE_LOCATION = "/Sequences/fault-sequence/";
+    public static final String FAULT_SEQUENCE_LOCATION = directorySeparator+"Sequences"+directorySeparator+"fault-sequence"+directorySeparator;
     //extension of xml files
     public static final String XML_EXTENSION = ".xml";
     //location of the wsdl file
-    public static final String WSDL_LOCATION = "/WSDL/";
+    public static final String WSDL_LOCATION = directorySeparator+"WSDL"+directorySeparator;
     //extension of wsdl files
     public static final String WSDL_EXTENSION = ".wsdl";
 

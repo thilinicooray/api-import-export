@@ -181,8 +181,8 @@ public class APIService {
 
                 //Temporary directory is used to create the required folders
                 String currentDirectory = System.getProperty(APIImportExportConstants.TEMP_DIR);
-                String createdFolders = "/" + RandomStringUtils.
-                        randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
+                String createdFolders = File.pathSeparator + RandomStringUtils.
+                        randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + File.pathSeparator;
                 File importFolder = new File(currentDirectory + createdFolders);
                 boolean folderCreateStatus = importFolder.mkdirs();
 

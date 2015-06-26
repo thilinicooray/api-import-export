@@ -143,7 +143,7 @@ public final class APIImportUtil {
 
                 //This index variable is used to get the extracted folder name; that is root directory
                 if (index == 0) {
-                    archiveName = currentEntry.substring(0, currentEntry.indexOf('/'));
+                    archiveName = currentEntry.substring(0, currentEntry.indexOf(File.pathSeparatorChar));
                     --index;
                 }
 
