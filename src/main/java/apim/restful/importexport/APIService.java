@@ -71,7 +71,8 @@ public class APIService {
      * @param providerName Provider name of the API that needs to be exported
      * @return Zipped API as the response to the service call
      */
-    @GET @Path("/export-api")
+    @GET
+    @Path("/export-api")
     @Produces("application/zip")
     public Response exportAPI(@QueryParam("name") String name, @QueryParam("version") String version,
             @QueryParam("provider") String providerName, @Context HttpHeaders httpHeaders) {
@@ -109,11 +110,11 @@ public class APIService {
 
             //create temp location for storing API data to generate archive
             String currentDirectory = System.getProperty(APIImportExportConstants.TEMP_DIR);
-            String createdFolders = "/" + RandomStringUtils.
-                    randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + "/";
-            File importFolder = new File(currentDirectory + createdFolders);
-            APIExportUtil.createDirectory(importFolder.getPath());
-            String archiveBasePath = importFolder.toString();
+            String createdFolders = File.separator + RandomStringUtils.
+                    randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + File.separator;
+            File exportFolder = new File(currentDirectory + createdFolders);
+            APIExportUtil.createDirectory(exportFolder.getPath());
+            String archiveBasePath = exportFolder.toString();
 
             APIExportUtil.setArchiveBasePath(archiveBasePath);
 
