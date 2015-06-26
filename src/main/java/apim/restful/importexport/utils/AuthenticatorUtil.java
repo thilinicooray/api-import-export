@@ -63,7 +63,6 @@ public class AuthenticatorUtil {
      */
 
     public static Response authorizeUser(HttpHeaders headers) throws APIExportException {
-
         if (!isValidCredentials(headers)) {
             log.error("No username and password is provided for authentication");
             return Response.status(Response.Status.UNAUTHORIZED)
