@@ -143,7 +143,7 @@ public final class APIImportUtil {
 
                 //This index variable is used to get the extracted folder name; that is root directory
                 if (index == 0) {
-                    archiveName = currentEntry.substring(0, currentEntry.indexOf(File.pathSeparatorChar));
+                    archiveName = currentEntry.substring(0, currentEntry.indexOf(File.separatorChar));
                     --index;
                 }
 
@@ -388,7 +388,40 @@ public final class APIImportUtil {
     private static void addAPISequences(String pathToArchive, API importedApi, String currentUser)
             throws APIImportException {
 
-        try {
+<<<<<<< HEAD
+         Registry registry = APIExportUtil.getRegistry(currentUser);
+         String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
+         String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
+                 + inSequenceFileName;
+
+         //Adding in-sequence, if any
+         if (checkFileExistence(inSequenceFileLocation)) {
+             addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
+                     inSequenceFileName, inSequenceFileLocation);
+         }
+
+         String outSequenceFileName = importedApi.getOutSequence() + APIImportExportConstants.XML_EXTENSION;
+         String outSequenceFileLocation = pathToArchive + APIImportExportConstants.OUT_SEQUENCE_LOCATION
+                 + outSequenceFileName;
+
+         //Adding out-sequence, if any
+         if (checkFileExistence(outSequenceFileLocation)) {
+             addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
+                     outSequenceFileName, outSequenceFileLocation);
+         }
+
+         String faultSequenceFileName = importedApi.getFaultSequence() + APIImportExportConstants.XML_EXTENSION;
+         String faultSequenceFileLocation = pathToArchive + APIImportExportConstants.FAULT_SEQUENCE_LOCATION
+                 + faultSequenceFileName;
+
+         //Adding fault-sequence, if any
+         if (checkFileExistence(faultSequenceFileLocation)) {
+             addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
+                     faultSequenceFileName, faultSequenceFileLocation);
+         }
+
+=======
+
             Registry registry = APIExportUtil.getRegistry(currentUser);
             String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
             String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
@@ -419,10 +452,9 @@ public final class APIImportUtil {
                 addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
                         faultSequenceFileName, faultSequenceFileLocation);
             }
-        } catch (APIExportException e) {
-            log.error("Failed to get the registry instance. ", e);
-            throw new APIImportException("Failed to get the registry instance. " + e.getMessage());
-        }
+
+
+>>>>>>> upstream/master
     }
 
     /**
@@ -491,9 +523,6 @@ public final class APIImportUtil {
             } catch (MalformedURLException e) {
                 log.error("Error in getting WSDL URL. ", e);
                 throw new APIImportException("Error in getting WSDL URL. " + e.getMessage());
-            } catch (APIExportException e) {
-                log.error("Error in getting the registry instance to add WSDL. ", e);
-                throw new APIImportException("Error in getting the registry instance to add WSDL. " + e.getMessage());
             } catch (org.wso2.carbon.registry.core.exceptions.RegistryException e) {
                 log.error("Error in putting the WSDL resource to registry. ", e);
                 throw new APIImportException("Error in putting the WSDL resource to registry. " + e.getMessage());
