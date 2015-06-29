@@ -388,7 +388,6 @@ public final class APIImportUtil {
     private static void addAPISequences(String pathToArchive, API importedApi, String currentUser)
             throws APIImportException {
 
-<<<<<<< HEAD
          Registry registry = APIExportUtil.getRegistry(currentUser);
          String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
          String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
@@ -419,42 +418,6 @@ public final class APIImportUtil {
              addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
                      faultSequenceFileName, faultSequenceFileLocation);
          }
-
-=======
-
-            Registry registry = APIExportUtil.getRegistry(currentUser);
-            String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
-            String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
-                    + inSequenceFileName;
-
-            //Adding in-sequence, if any
-            if (checkFileExistence(inSequenceFileLocation)) {
-                addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
-                        inSequenceFileName, inSequenceFileLocation);
-            }
-
-            String outSequenceFileName = importedApi.getOutSequence() + APIImportExportConstants.XML_EXTENSION;
-            String outSequenceFileLocation = pathToArchive + APIImportExportConstants.OUT_SEQUENCE_LOCATION
-                    + outSequenceFileName;
-
-            //Adding out-sequence, if any
-            if (checkFileExistence(outSequenceFileLocation)) {
-                addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
-                        outSequenceFileName, outSequenceFileLocation);
-            }
-
-            String faultSequenceFileName = importedApi.getFaultSequence() + APIImportExportConstants.XML_EXTENSION;
-            String faultSequenceFileLocation = pathToArchive + APIImportExportConstants.FAULT_SEQUENCE_LOCATION
-                    + faultSequenceFileName;
-
-            //Adding fault-sequence, if any
-            if (checkFileExistence(faultSequenceFileLocation)) {
-                addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
-                        faultSequenceFileName, faultSequenceFileLocation);
-            }
-
-
->>>>>>> upstream/master
     }
 
     /**
