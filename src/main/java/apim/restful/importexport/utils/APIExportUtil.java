@@ -309,7 +309,8 @@ public class APIExportUtil {
             for (Documentation doc : docList) {
                 String sourceType = doc.getSourceType().name();
                 if (Documentation.DocumentSourceType.FILE.toString().equalsIgnoreCase(sourceType)) {
-                    String fileName = doc.getFilePath().substring(doc.getFilePath().lastIndexOf(File.separator) + 1);
+                    String fileName = doc.getFilePath().substring(doc.getFilePath().
+                            lastIndexOf(RegistryConstants.PATH_SEPARATOR) + 1);
                     String filePath = APIUtil.getDocumentationFilePath(apiIdentifier, fileName);
 
                     //check whether resource exists in the registry
