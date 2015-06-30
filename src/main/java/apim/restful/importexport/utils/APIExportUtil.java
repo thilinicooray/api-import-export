@@ -251,11 +251,11 @@ public class APIExportUtil {
                 }
             }
         } catch (IOException e) {
-            //Exception is ignored by logging due to the reason that Thumbnail is not essential for API
+            //Exception is ignored by logging due to the reason that Thumbnail is not essential for
+            // an API to be recreated
             log.error("I/O error while writing API Thumbnail to file" + e.getMessage());
         } catch (RegistryException e) {
             log.error("Error while retrieving API Thumbnail " + e.getMessage());
-            throw new APIExportException("Error while retrieving Thumbnail", e);
         } finally {
             IOUtils.closeQuietly(imageDataStream);
             IOUtils.closeQuietly(outputStream);
