@@ -67,7 +67,7 @@ import java.util.Enumeration;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
+import java.util.zip.ZipInputStream;
 
 /**
  * This class provides the functions utilized to import an API from an API archive.
@@ -125,6 +125,7 @@ public final class APIImportUtil {
     public static String extractArchive(File sourceFile, String destination) throws APIImportException {
 
         BufferedInputStream inputStream = null;
+        InputStream zipInputStream = null;
         FileOutputStream outputStream = null;
         ZipFile zip = null;
         String archiveName = null;
@@ -156,7 +157,8 @@ public final class APIImportUtil {
                 }
 
                 if (!entry.isDirectory()) {
-                    inputStream = new BufferedInputStream(zip.getInputStream(entry));
+                    zipInputStream = zip.getInputStream(entry);
+                    inputStream = new BufferedInputStream(zipInputStream);
 
                     // write the current file to the destination
                     outputStream = new FileOutputStream(destinationFile);
@@ -168,7 +170,7 @@ public final class APIImportUtil {
             log.error("Failed to extract archive file ", e);
             throw new APIImportException("Failed to extract archive file. " + e.getMessage());
         } finally {
-            IOUtils.closeQuietly(zip);
+            IOUtils.closeQuietly(zipInputStream);
             IOUtils.closeQuietly(inputStream);
             IOUtils.closeQuietly(outputStream);
         }
