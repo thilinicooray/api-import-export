@@ -158,17 +158,13 @@ public class APIService {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
     public Response importAPI(@Multipart("file") InputStream uploadedInputStream, @QueryParam("preserveProvider")
-                        String defaultProviderStatus, @Context HttpHeaders httpHeaders) {
+    String defaultProviderStatus, @Context HttpHeaders httpHeaders) {
 
-        boolean isProviderPreserved;
+        boolean isProviderPreserved = true;
 
-        //Check the value specified in the URL parameter to ensure it is correct
-        if (APIImportExportConstants.STATUS_TRUE.equalsIgnoreCase(defaultProviderStatus)) {
-            isProviderPreserved = true;
-        } else if (APIImportExportConstants.STATUS_FALSE.equalsIgnoreCase(defaultProviderStatus)) {
+        //Check if the URL parameter value is specified, otherwise the default value "true" is used
+        if (APIImportExportConstants.STATUS_FALSE.equalsIgnoreCase(defaultProviderStatus)) {
             isProviderPreserved = false;
-        } else {
-            return Response.status(Status.NOT_ACCEPTABLE).entity("Invalid value for query parameter.\n").build();
         }
 
         try {
@@ -182,8 +178,9 @@ public class APIService {
 
                 //Temporary directory is used to create the required folders
                 String currentDirectory = System.getProperty(APIImportExportConstants.TEMP_DIR);
-                String createdFolders = File.pathSeparator + RandomStringUtils.
-                        randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) + File.pathSeparator;
+                String createdFolders = File.separator +
+                        RandomStringUtils.randomAlphanumeric(APIImportExportConstants.TEMP_FILENAME_LENGTH) +
+                        File.separator;
                 File importFolder = new File(currentDirectory + createdFolders);
                 boolean folderCreateStatus = importFolder.mkdirs();
 
@@ -193,9 +190,12 @@ public class APIService {
                     String uploadFileName = APIImportExportConstants.UPLOAD_FILE_NAME;
                     String absolutePath = currentDirectory + createdFolders;
                     APIImportUtil.transferFile(uploadedInputStream, uploadFileName, absolutePath);
+
                     String extractedFolderName = APIImportUtil.extractArchive(
                             new File(absolutePath + uploadFileName), absolutePath);
+
                     APIImportUtil.importAPI(absolutePath + extractedFolderName, currentUser, isProviderPreserved);
+
                     importFolder.deleteOnExit();
                     return Response.status(Status.CREATED).entity("API imported successfully.\n").build();
                 } else {
@@ -208,9 +208,6 @@ public class APIService {
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error in initializing API provider.\n").build();
         } catch (APIImportException e) {
             String errorDetail = new Gson().toJson(e.getErrorDescription());
-            return Response.serverError().entity(errorDetail).build();
-        } catch (APIManagementException e) {
-            String errorDetail = new Gson().toJson(e.getMessage());
             return Response.serverError().entity(errorDetail).build();
         }
     }

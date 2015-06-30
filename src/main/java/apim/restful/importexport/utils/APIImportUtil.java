@@ -180,100 +180,91 @@ public final class APIImportUtil {
      * @param pathToArchive            location of the extracted folder of the API
      * @param currentUser              the current logged in user
      * @param isDefaultProviderAllowed decision to keep or replace the provider
-     * @throws APIManagementException if the resource addition to API fails
-     * @throws APIImportException     if the tiers are not supported or if api.json file is not found
+     * @throws APIImportException     if there is an error in importing an API
      */
     public static void importAPI(String pathToArchive, String currentUser, boolean isDefaultProviderAllowed)
-            throws APIManagementException, APIImportException {
+            throws APIImportException {
 
         API importedApi;
 
+        // If the original provider is preserved,
         if (isDefaultProviderAllowed) {
-            importedApi = preserveOriginalProvider(pathToArchive);
+
+            FileInputStream inputStream = null;
+            BufferedReader bufferedReader = null;
+
+            try {
+                inputStream = new FileInputStream(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION);
+                bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+                importedApi = new Gson().fromJson(bufferedReader, API.class);
+            } catch (FileNotFoundException e) {
+                log.error("Error in locating api.json file. ", e);
+                throw new APIImportException("Error in locating api.json file. " + e.getMessage());
+            } finally {
+                IOUtils.closeQuietly(inputStream);
+                IOUtils.closeQuietly(bufferedReader);
+            }
         } else {
-            importedApi = setApiProviderToCurrentUser(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION,
-                    currentUser);
+
+            String pathToJSONFile = pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION;
+
+            try {
+                String jsonContent = FileUtils.readFileToString(new File(pathToJSONFile));
+                JsonElement configElement = new JsonParser().parse(jsonContent);
+                JsonObject configObject = configElement.getAsJsonObject();
+
+                //locate the "providerName" within the "id" and set it as the current user
+                JsonObject apiId = configObject.getAsJsonObject(APIImportExportConstants.ID_ELEMENT);
+                apiId.addProperty(APIImportExportConstants.PROVIDER_ELEMENT, APIUtil.replaceEmailDomain(currentUser));
+                importedApi = new Gson().fromJson(configElement, API.class);
+
+            } catch (IOException e) {
+                log.error("Error in setting API provider to logged in user. ", e);
+                throw new APIImportException("Error in setting API provider to logged in user. " + e.getMessage());
+            }
         }
 
-        Set<Tier> allowedTiers = provider.getTiers();
-        boolean isAllTiersAvailable = allowedTiers.containsAll(importedApi.getAvailableTiers());
+        Set<Tier> allowedTiers;
+        Set<Tier> unsupportedTiersList;
 
-        if (!isAllTiersAvailable) {
+        try{
+            allowedTiers = provider.getTiers();
+        } catch (APIManagementException e) {
+            log.error("Error in retrieving tiers of the provider. ", e);
+            throw new APIImportException("Error in retrieving tiers of the provider. " + e.getMessage());
+        }
+
+        if (!(allowedTiers.isEmpty())){
+            unsupportedTiersList = Sets.difference(importedApi.getAvailableTiers(), allowedTiers);
 
             //If at least one unsupported tier is found, it should be removed before adding API
-            Set<Tier> unsupportedTiersList = Sets.difference(importedApi.getAvailableTiers(), allowedTiers);
-            for (Tier unsupportedTier : unsupportedTiersList) {
+            if (!(unsupportedTiersList.isEmpty())) {
+                for (Tier unsupportedTier : unsupportedTiersList) {
 
-                //Process is continued with a warning and only supported tiers are added to the importer API
-                log.warn("Tier name : " + unsupportedTier.getName() + " is not supported.");
+                    //Process is continued with a warning and only supported tiers are added to the importer API
+                    log.warn("Tier name : " + unsupportedTier.getName() + " is not supported.");
+                }
+
+                //Remove the unsupported tiers before adding the API
+                importedApi.removeAvailableTiers(unsupportedTiersList);
             }
-
-            //Remove the unsupported tiers before adding the API
-            importedApi.removeAvailableTiers(unsupportedTiersList);
         }
 
-        provider.addAPI(importedApi);
+        try{
+            provider.addAPI(importedApi);
+            addSwaggerDefinition(importedApi.getId(), pathToArchive);
+        } catch (APIManagementException e){
+            //Error is logged and APIImportException is thrown because adding API and swagger are mandatory steps
+            log.error("Error in adding API to the provider. ", e);
+            throw new APIImportException("Error in adding API to the provider. " + e.getMessage());
+        }
+
+        //Since Image, documents, sequences and WSDL are optional, exceptions are logged and ignored in implementation
         addAPIImage(pathToArchive, importedApi);
         addAPIDocuments(pathToArchive, importedApi);
         addAPISequences(pathToArchive, importedApi, currentUser);
         addAPIWsdl(pathToArchive, importedApi, currentUser);
-        addSwaggerDefinition(importedApi.getId(), pathToArchive);
-    }
 
-    /**
-     * This method will create the API with the unmodified provider
-     *
-     * @param pathToArchive location of the extracted folder of the API
-     * @return API object with unmodified provider
-     * @throws APIImportException if the api.json file cannot be located
-     */
-    private static API preserveOriginalProvider(String pathToArchive) throws APIImportException {
-
-        FileInputStream inputStream = null;
-        BufferedReader bufferedReader = null;
-        API providerUnModifiedAPI;
-
-        try {
-            inputStream = new FileInputStream(pathToArchive + APIImportExportConstants.JSON_FILE_LOCATION);
-            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-            providerUnModifiedAPI = new Gson().fromJson(bufferedReader, API.class);
-        } catch (FileNotFoundException e) {
-            log.error("Error in locating api.json file. ", e);
-            throw new APIImportException("Error in locating api.json file. " + e.getMessage());
-        } finally {
-            IOUtils.closeQuietly(inputStream);
-            IOUtils.closeQuietly(bufferedReader);
-        }
-        return providerUnModifiedAPI;
-    }
-
-    /**
-     * This method sets the provider of the imported API as the current user
-     *
-     * @param pathToJSONFile the location to the JSON file representing the API
-     * @param userName       username of the current user
-     * @return API object with the modified provider
-     * @throws APIImportException if the JSON file cannot be read properly
-     */
-    private static API setApiProviderToCurrentUser(String pathToJSONFile, String userName) throws APIImportException {
-
-        API providerModifiedAPI;
-
-        try {
-            String jsonContent = FileUtils.readFileToString(new File(pathToJSONFile));
-            JsonElement configElement = new JsonParser().parse(jsonContent);
-            JsonObject configObject = configElement.getAsJsonObject();
-
-            //locate the "providerName" within the "id" and set it as the current user
-            JsonObject apiId = configObject.getAsJsonObject(APIImportExportConstants.ID_ELEMENT);
-            apiId.addProperty(APIImportExportConstants.PROVIDER_ELEMENT, APIUtil.replaceEmailDomain(userName));
-            providerModifiedAPI = new Gson().fromJson(configElement, API.class);
-
-        } catch (IOException e) {
-            log.error("Error in setting API provider to logged in user. ", e);
-            throw new APIImportException("Error in setting API provider to logged in user. " + e.getMessage());
-        }
-        return providerModifiedAPI;
     }
 
     /**
@@ -281,13 +272,13 @@ public final class APIImportUtil {
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
-     * @throws org.wso2.carbon.apimgt.api.APIManagementException if API update fails after adding the image
      */
-    private static void addAPIImage(String pathToArchive, API importedApi) throws APIManagementException {
+    private static void addAPIImage(String pathToArchive, API importedApi) {
 
         //Adding image icon to the API if there is any
         File imageFolder = new File(pathToArchive + APIImportExportConstants.IMAGE_FILE_LOCATION);
         File[] fileArray = imageFolder.listFiles();
+        FileInputStream inputStream = null;
 
         try {
             if (imageFolder.isDirectory() && fileArray != null) {
@@ -297,7 +288,7 @@ public final class APIImportUtil {
                     if (imageFile != null && imageFile.getName().contains(APIImportExportConstants.IMAGE_FILE_NAME)) {
 
                         String mimeType = URLConnection.guessContentTypeFromName(imageFile.getName());
-                        FileInputStream inputStream = new FileInputStream(imageFile.getAbsolutePath());
+                        inputStream = new FileInputStream(imageFile.getAbsolutePath());
                         Icon apiImage = new Icon(inputStream, mimeType);
                         String thumbPath = APIUtil.getIconPath(importedApi.getId());
                         String thumbnailUrl = provider.addIcon(thumbPath, apiImage);
@@ -306,16 +297,23 @@ public final class APIImportUtil {
                                 importedApi.getId().getProviderName()));
                         APIUtil.setResourcePermissions(importedApi.getId().getProviderName(), null, null, thumbPath);
                         provider.updateAPI(importedApi);
+
+                        //the loop is terminated after successfully locating the icon
                         break;
                     }
                 }
             }
         } catch (FileNotFoundException e) {
             //This is logged and process is continued because icon is optional for an API
-            log.error("Icon for API is not found", e);
+            log.error("Icon for API is not found. ", e);
+        } catch (APIManagementException e){
+            //This is logged and process is continued because icon is optional for an API
+            log.error("Failed to add icon to the API. ", e);
         } catch (FaultGatewaysException e) {
-            log.error("Failed to update API after adding icon", e);
-            throw new APIManagementException("Failed to update API after adding icon. " + e.getMessage());
+            //This is logged and process is continued because icon is optional for an API
+            log.error("Failed to update API after adding icon. ", e);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
         }
     }
 
@@ -324,18 +322,19 @@ public final class APIImportUtil {
      *
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
-     * @throws org.wso2.carbon.apimgt.api.APIManagementException if the document addition fails
      */
-    private static void addAPIDocuments(String pathToArchive, API importedApi)
-            throws APIManagementException {
+    private static void addAPIDocuments(String pathToArchive, API importedApi) {
 
         String docFileLocation = pathToArchive + APIImportExportConstants.DOCUMENT_FILE_LOCATION;
+        FileInputStream inputStream = null;
+        BufferedReader bufferedReader = null;
         APIIdentifier apiIdentifier = importedApi.getId();
 
         try {
             if (checkFileExistence(docFileLocation)) {
-                FileInputStream inputStream = new FileInputStream(docFileLocation);
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+                inputStream = new FileInputStream(docFileLocation);
+                bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
                 Documentation[] documentations = new Gson().fromJson(bufferedReader, Documentation[].class);
 
                 //For each type of document separate action is performed
@@ -344,11 +343,9 @@ public final class APIImportUtil {
                     if (APIImportExportConstants.INLINE_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         provider.addDocumentation(apiIdentifier, doc);
                         provider.addDocumentationContent(importedApi, doc.getName(), doc.getSummary());
-                        continue;
 
                     } else if (APIImportExportConstants.URL_DOC_TYPE.equalsIgnoreCase(doc.getSourceType().toString())) {
                         provider.addDocumentation(apiIdentifier, doc);
-                        continue;
 
                     } else if (APIImportExportConstants.FILE_DOC_TYPE.
                             equalsIgnoreCase(doc.getSourceType().toString())) {
@@ -367,14 +364,20 @@ public final class APIImportUtil {
                                 importedApi.getVisibility(), visibleRoles, filePathDoc);
                         doc.setFilePath(provider.addIcon(filePathDoc, apiDocument));
                         provider.addDocumentation(apiIdentifier, doc);
-                        continue;
                     }
                 }
             }
         } catch (FileNotFoundException e) {
+            //this error is logged and ignored because documents are optional in an API
+            log.error("Failed to locate the document files of the API.", e);
+        } catch (APIManagementException e){
+            //this error is logged and ignored because documents are optional in an API
             log.error("Failed to add Documentations to API.", e);
-            throw new APIManagementException("Failed to add Documentations to API. " + e.getMessage());
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(bufferedReader);
         }
+
     }
 
     /**
@@ -383,41 +386,39 @@ public final class APIImportUtil {
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
      * @param currentUser   current logged in username
-     * @throws APIImportException if getting the registry instance fails
      */
-    private static void addAPISequences(String pathToArchive, API importedApi, String currentUser)
-            throws APIImportException {
+    private static void addAPISequences(String pathToArchive, API importedApi, String currentUser) {
 
-         Registry registry = APIExportUtil.getRegistry(currentUser);
-         String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
-         String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
-                 + inSequenceFileName;
+        Registry registry = APIExportUtil.getRegistry(currentUser);
+        String inSequenceFileName = importedApi.getInSequence() + APIImportExportConstants.XML_EXTENSION;
+        String inSequenceFileLocation = pathToArchive + APIImportExportConstants.IN_SEQUENCE_LOCATION
+                + inSequenceFileName;
 
-         //Adding in-sequence, if any
-         if (checkFileExistence(inSequenceFileLocation)) {
-             addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
-                     inSequenceFileName, inSequenceFileLocation);
-         }
+        //Adding in-sequence, if any
+        if (checkFileExistence(inSequenceFileLocation)) {
+            addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_IN,
+                    inSequenceFileName, inSequenceFileLocation);
+        }
 
-         String outSequenceFileName = importedApi.getOutSequence() + APIImportExportConstants.XML_EXTENSION;
-         String outSequenceFileLocation = pathToArchive + APIImportExportConstants.OUT_SEQUENCE_LOCATION
-                 + outSequenceFileName;
+        String outSequenceFileName = importedApi.getOutSequence() + APIImportExportConstants.XML_EXTENSION;
+        String outSequenceFileLocation = pathToArchive + APIImportExportConstants.OUT_SEQUENCE_LOCATION
+                + outSequenceFileName;
 
-         //Adding out-sequence, if any
-         if (checkFileExistence(outSequenceFileLocation)) {
-             addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
-                     outSequenceFileName, outSequenceFileLocation);
-         }
+        //Adding out-sequence, if any
+        if (checkFileExistence(outSequenceFileLocation)) {
+            addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_OUT,
+                    outSequenceFileName, outSequenceFileLocation);
+        }
 
-         String faultSequenceFileName = importedApi.getFaultSequence() + APIImportExportConstants.XML_EXTENSION;
-         String faultSequenceFileLocation = pathToArchive + APIImportExportConstants.FAULT_SEQUENCE_LOCATION
-                 + faultSequenceFileName;
+        String faultSequenceFileName = importedApi.getFaultSequence() + APIImportExportConstants.XML_EXTENSION;
+        String faultSequenceFileLocation = pathToArchive + APIImportExportConstants.FAULT_SEQUENCE_LOCATION
+                + faultSequenceFileName;
 
-         //Adding fault-sequence, if any
-         if (checkFileExistence(faultSequenceFileLocation)) {
-             addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
-                     faultSequenceFileName, faultSequenceFileLocation);
-         }
+        //Adding fault-sequence, if any
+        if (checkFileExistence(faultSequenceFileLocation)) {
+            addSequenceToRegistry(registry, APIConstants.API_CUSTOM_SEQUENCE_TYPE_FAULT,
+                    faultSequenceFileName, faultSequenceFileLocation);
+        }
     }
 
     /**
@@ -427,10 +428,9 @@ public final class APIImportUtil {
      * @param customSequenceType   type of the sequence
      * @param sequenceFileName     name of the sequence
      * @param sequenceFileLocation location of the sequence file
-     * @throws APIImportException if getting the registry instance fails
      */
     private static void addSequenceToRegistry(Registry registry, String customSequenceType, String sequenceFileName,
-                                              String sequenceFileLocation) throws APIImportException {
+                                              String sequenceFileLocation) {
 
         String regResourcePath = APIConstants.API_CUSTOM_SEQUENCE_LOCATION + File.separator + customSequenceType
                 + File.separator + sequenceFileName;
@@ -452,11 +452,11 @@ public final class APIImportUtil {
                 registry.put(regResourcePath, inSeqResource);
             }
         } catch (org.wso2.carbon.registry.api.RegistryException e) {
-            log.error("Failed to add sequences into the registry. ", e);
-            throw new APIImportException("Failed to add sequences into the registry. " + e.getMessage());
+            //this is logged and ignored because sequences are optional
+            log.error("Failed to add sequences into the registry: " + customSequenceType, e);
         } catch (IOException e) {
-            log.error("I/O error while writing sequence data to the registry. ", e);
-            throw new APIImportException("I/O error while writing sequence data to the registry. " + e.getMessage());
+            //this is logged and ignored because sequences are optional
+            log.error("I/O error while writing sequence data to the registry, Sequence type: " + customSequenceType, e);
         } finally {
             IOUtils.closeQuietly(inSeqStream);
         }
@@ -468,10 +468,8 @@ public final class APIImportUtil {
      * @param pathToArchive location of the extracted folder of the API
      * @param importedApi   the imported API object
      * @param currentUser   current logged in username
-     * @throws APIImportException if there is a URL error or registry error while storing the resource in registry
      */
-    private static void addAPIWsdl(String pathToArchive, API importedApi, String currentUser)
-            throws APIImportException {
+    private static void addAPIWsdl(String pathToArchive, API importedApi, String currentUser) {
 
         String wsdlFileName = importedApi.getId().getApiName() + "-" + importedApi.getId().getVersion() +
                 APIImportExportConstants.WSDL_EXTENSION;
@@ -484,14 +482,14 @@ public final class APIImportUtil {
                 Registry registry = APIExportUtil.getRegistry(currentUser);
                 APIUtil.createWSDL((org.wso2.carbon.registry.core.Registry) registry, importedApi);
             } catch (MalformedURLException e) {
+                //this exception is logged and ignored since WSDL is optional for an API
                 log.error("Error in getting WSDL URL. ", e);
-                throw new APIImportException("Error in getting WSDL URL. " + e.getMessage());
             } catch (org.wso2.carbon.registry.core.exceptions.RegistryException e) {
+                //this exception is logged and ignored since WSDL is optional for an API
                 log.error("Error in putting the WSDL resource to registry. ", e);
-                throw new APIImportException("Error in putting the WSDL resource to registry. " + e.getMessage());
             } catch (APIManagementException e) {
+                //this exception is logged and ignored since WSDL is optional for an API
                 log.error("Error in creating the WSDL resource in the registry. ", e);
-                throw new APIImportException("Error in creating the WSDL resource in the registry. " + e.getMessage());
             }
         }
     }
@@ -505,23 +503,22 @@ public final class APIImportUtil {
      */
     private static void addSwaggerDefinition(APIIdentifier apiId, String archivePath)
             throws APIImportException {
+
         try {
             String swaggerContent = FileUtils.readFileToString(
                     new File(archivePath + APIImportExportConstants.SWAGGER_DEFINITION_LOCATION));
             provider.saveSwagger20Definition(apiId, swaggerContent);
         } catch (APIManagementException e) {
             log.error("Error in adding Swagger definition for the API. ", e);
-            throw new APIImportException("Error in adding Swagger definition for the API. " +
-                    e.getMessage());
+            throw new APIImportException("Error in adding Swagger definition for the API. " + e.getMessage());
         } catch (IOException e) {
             log.error("Error in importing Swagger definition for the API. ", e);
-            throw new APIImportException("Error in importing Swagger definition for the API. " +
-                    e.getMessage());
+            throw new APIImportException("Error in importing Swagger definition for the API. " + e.getMessage());
         }
     }
 
     /**
-     * This method checks whether a given file exists
+     * This method checks whether a given file exists in a given location
      *
      * @param fileLocation location of the file
      * @return true if the file exists, false otherwise

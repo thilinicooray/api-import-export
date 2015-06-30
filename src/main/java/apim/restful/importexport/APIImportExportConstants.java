@@ -27,8 +27,6 @@ public final class APIImportExportConstants {
 
     //system dependent default path separator character, represented as a string
     public static final String DIRECTORY_SEPARATOR = File.separator;
-    //string representing the true state when preserving the provider
-    public static final String STATUS_TRUE = "TRUE";
     //string representing the false state when preserving the provider
     public static final String STATUS_FALSE = "FALSE";
     //length of the name of the temporary directory
@@ -38,19 +36,22 @@ public final class APIImportExportConstants {
     //name of the uploaded zip file
     public static final String UPLOAD_FILE_NAME = "APIArchive.zip";
     //location of the api JSON file
-    public static final String JSON_FILE_LOCATION = DIRECTORY_SEPARATOR +"Meta-information"+ DIRECTORY_SEPARATOR +"api.json";
+    public static final String JSON_FILE_LOCATION = DIRECTORY_SEPARATOR + "Meta-information" + DIRECTORY_SEPARATOR +
+            "api.json";
     //name of the id element tag of the api.json file
     public static final String ID_ELEMENT = "id";
     //name of the id element tag of the api.json file
     public static final String PROVIDER_ELEMENT = "providerName";
     //location of the api swagger definition file
-    public static final String SWAGGER_DEFINITION_LOCATION = DIRECTORY_SEPARATOR +"Meta-information"+ DIRECTORY_SEPARATOR +"swagger.json";
+    public static final String SWAGGER_DEFINITION_LOCATION = DIRECTORY_SEPARATOR + "Meta-information" +
+            DIRECTORY_SEPARATOR + "swagger.json";
     //location of the image
-    public static final String IMAGE_FILE_LOCATION = DIRECTORY_SEPARATOR +"Image"+ DIRECTORY_SEPARATOR;
+    public static final String IMAGE_FILE_LOCATION = DIRECTORY_SEPARATOR + "Image" + DIRECTORY_SEPARATOR;
     //name of the image
     public static final String IMAGE_FILE_NAME = "icon";
     //location of the documents JSON file
-    public static final String DOCUMENT_FILE_LOCATION = DIRECTORY_SEPARATOR +"Docs"+ DIRECTORY_SEPARATOR +"docs.json";
+    public static final String DOCUMENT_FILE_LOCATION = DIRECTORY_SEPARATOR + "Docs" + DIRECTORY_SEPARATOR +
+            "docs.json";
     //name of the inline file type
     public static final String INLINE_DOC_TYPE = "INLINE";
     //name of the url file type
@@ -58,15 +59,18 @@ public final class APIImportExportConstants {
     //name of the physical file type
     public static final String FILE_DOC_TYPE = "FILE";
     //location of the in sequence
-    public static final String IN_SEQUENCE_LOCATION = DIRECTORY_SEPARATOR +"Sequences"+ DIRECTORY_SEPARATOR +"in-sequence"+ DIRECTORY_SEPARATOR;
+    public static final String IN_SEQUENCE_LOCATION = DIRECTORY_SEPARATOR + "Sequences" + DIRECTORY_SEPARATOR +
+            "in-sequence" + DIRECTORY_SEPARATOR;
     //location of the out sequence
-    public static final String OUT_SEQUENCE_LOCATION = DIRECTORY_SEPARATOR +"Sequences"+ DIRECTORY_SEPARATOR +"out-sequence"+ DIRECTORY_SEPARATOR;
+    public static final String OUT_SEQUENCE_LOCATION = DIRECTORY_SEPARATOR + "Sequences" + DIRECTORY_SEPARATOR +
+            "out-sequence" + DIRECTORY_SEPARATOR;
     //location of the fault sequence
-    public static final String FAULT_SEQUENCE_LOCATION = DIRECTORY_SEPARATOR +"Sequences"+ DIRECTORY_SEPARATOR +"fault-sequence"+ DIRECTORY_SEPARATOR;
+    public static final String FAULT_SEQUENCE_LOCATION = DIRECTORY_SEPARATOR + "Sequences" + DIRECTORY_SEPARATOR +
+            "fault-sequence" + DIRECTORY_SEPARATOR;
     //extension of xml files
     public static final String XML_EXTENSION = ".xml";
     //location of the wsdl file
-    public static final String WSDL_LOCATION = DIRECTORY_SEPARATOR +"WSDL"+ DIRECTORY_SEPARATOR;
+    public static final String WSDL_LOCATION = DIRECTORY_SEPARATOR + "WSDL" + DIRECTORY_SEPARATOR;
     //extension of wsdl files
     public static final String WSDL_EXTENSION = ".wsdl";
 
