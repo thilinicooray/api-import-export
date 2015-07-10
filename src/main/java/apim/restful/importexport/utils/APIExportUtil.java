@@ -23,6 +23,8 @@ import apim.restful.importexport.APIExportException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -534,8 +536,11 @@ public class APIExportUtil {
 
         try {
             String swaggerDefinition = definitionFromSwagger20.getAPIDefinition(apiToReturn.getId(), registry);
+            JsonParser parser = new JsonParser();
+            JsonObject json = parser.parse(swaggerDefinition).getAsJsonObject();
+            String formattedSwaggerJson = gson.toJson(json);
             writeFile(archivePath + File.separator + "Meta-information" + File.separator + "swagger.json",
-                    swaggerDefinition);
+                    formattedSwaggerJson);
 
             if (log.isDebugEnabled()) {
                 log.debug("Meta information retrieved successfully");
