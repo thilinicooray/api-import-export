@@ -19,15 +19,17 @@
 package apim.restful.importexport;
 
 /**
- * This is the class to represent APIImportException. This exception is used to indicate the
- * exceptions that might be occurred during API import process.
+ * This is the class to represent APIImportException. This exception is used to
+ * indicate the exceptions that might be occurred during API import process.
  */
 public class APIImportException extends Exception {
+
+    private static final long serialVersionUID = -350430019045208269L;
 
     String errorDescription;
 
     public APIImportException(String errorMessage) {
-        this.errorDescription = errorMessage;
+	this.errorDescription = errorMessage;
     }
 
     /**
@@ -36,6 +38,6 @@ public class APIImportException extends Exception {
      * @return errorDescription a string which contains the error
      */
     public String getErrorDescription() {
-        return this.errorDescription;
+	return this.errorDescription;
     }
 }
