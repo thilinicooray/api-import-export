@@ -23,16 +23,17 @@ package apim.restful.importexport;
  */
 public class APIExportException extends Exception {
 
+    private static final long serialVersionUID = -1417143596935000402L;
+
     public APIExportException(String msg) {
-        super(msg);
+	super(msg);
     }
 
     public APIExportException(String msg, Throwable e) {
-        super(msg, e);
+	super(msg, e);
     }
 
     public APIExportException(Throwable throwable) {
-        super(throwable);
+	super(throwable);
     }
 }
-
